@@ -27,6 +27,11 @@
       {{ workflow_extra_vars | default('_hosts: os_linux\nforce_failure_apply_patch: false') }}
 
   tasks:
+    - name: Ensure jq is available in execution environment
+      ansible.builtin.package:
+        name: jq
+        state: present
+
     - name: Validate required inputs
       ansible.builtin.assert:
         that:
