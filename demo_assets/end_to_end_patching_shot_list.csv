@@ -1,0 +1,15 @@
+Scene,Time Window,Screen,Narration Focus,Action
+1,0:00-0:30,AAP landing + Templates context,Demo objective and business value,Open End to End Patching workflow
+2,0:30-1:00,Workflow Visualizer,Create CR - Wait governance,Hover node and point to approval gate
+3,1:00-1:25,Visualizer + node details,Snapshot creation risk control,Open Create Snapshot node details
+4,1:25-1:45,Inventory source sync node,Pre-run inventory freshness,Show AWS Inventory sync node
+5,1:45-2:10,Pre Patch Task job output,System pre-check discipline,Open latest successful job output
+6,2:10-2:35,Pre App Tasks output,Graceful app handling,Show app validation/stop tasks
+7,2:35-3:15,Apply Patching output,Controlled package patching,Show package manager tasks and recap
+8,3:15-3:35,Post Patching output,OS post-validation,Show final task results
+9,3:35-4:00,Post App Tasks output,Service restart + app validation,Show health-check outcomes
+10,4:00-4:25,Delete Snapshot + AWS sync nodes,Operational cleanup and state sync,Show both nodes in sequence
+11,4:25-4:50,Generate Report artifacts,Audit/reporting output,Open report reference or artifact link
+12,4:50-5:05,Close CR job output,Governance closure,Show close status in CR task output
+13,5:05-6:20,Failed run visualizer path,Rollback + incident resilience,Launch with force_failure_apply_patch=true and show restore+incident nodes
+14,6:20-6:45,Visualizer full graph,Summary and outcomes,Zoom out and recap all paths
