@@ -28,9 +28,28 @@
 
   tasks:
     - name: Ensure jq is available in execution environment
-      ansible.builtin.package:
-        name: jq
-        state: present
+      ansible.builtin.shell: |
+        set -e
+        if command -v jq >/dev/null 2>&1; then
+          exit 0
+        fi
+        if command -v microdnf >/dev/null 2>&1; then
+          microdnf install -y jq
+          exit 0
+        fi
+        if command -v dnf >/dev/null 2>&1; then
+          dnf install -y jq
+          exit 0
+        fi
+        if command -v yum >/dev/null 2>&1; then
+          yum install -y jq
+          exit 0
+        fi
+        echo "No supported package manager found to install jq" >&2
+        exit 1
+      args:
+        executable: /bin/bash
+      changed_when: false
 
     - name: Validate required inputs
       ansible.builtin.assert:
