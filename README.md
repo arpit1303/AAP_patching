@@ -55,6 +55,7 @@ Failure branches trigger:
 ├── snow_*.yml
 ├── collections/
 │   └── ansible_collections/demo/...
+├── bootstrap_tam_day_assets.yml
 ├── scripts/
 │   └── setup_tam_day_aap.sh
 └── demo_assets/
@@ -99,21 +100,40 @@ Install required external collections:
 ansible-galaxy collection install -r collections/requirements.yml
 ```
 
-## Bootstrap AAP Templates + Workflow
+## Bootstrap AAP Templates + Workflow (AAP Job Template)
 
-Use the provided script to create/update AAP assets with source-consistent names and `TAM_DAY` label.
+Automate bootstrap through an AAP Job Template using playbook `bootstrap_tam_day_assets.yml`.
 
 ```bash
-chmod +x scripts/setup_tam_day_aap.sh
-
-export AAP_URL="https://<your-aap-controller>"
-export AAP_USER="admin"
-export AAP_PASS="<your-password>"
-
-./scripts/setup_tam_day_aap.sh
+# local optional validation run
+ansible-playbook bootstrap_tam_day_assets.yml \
+  -e "aap_url=https://<your-aap-controller>" \
+  -e "aap_user=admin" \
+  -e "aap_pass=<your-password>"
 ```
 
-### What the bootstrap script creates
+### Create the bootstrap Job Template in AAP
+
+1. Sync project `TAM_AAP_Patching` (branch `tam_arpit`).
+2. Create Job Template:
+   - Name: `Bootstrap TAM_DAY AAP Assets`
+   - Project: `TAM_AAP_Patching`
+   - Playbook: `bootstrap_tam_day_assets.yml`
+   - Inventory: `Demo Inventory`
+   - Execution Environment: `Default execution environment`
+   - Options: enable **Prompt on launch** for Variables
+3. Add label `TAM_DAY` to the template.
+4. Launch with variables:
+
+```yaml
+aap_url: "https://<your-aap-controller>"
+aap_user: "admin"
+aap_pass: "<your-password>"
+template_label: "TAM_DAY"
+workflow_name: "End to End Patching"
+```
+
+### What the bootstrap template creates
 
 - Project: `TAM_DAY AAP Patching`
 - Job Templates: source-consistent names (`Create Snapshot`, `Apply Patching`, etc.)
@@ -121,9 +141,9 @@ export AAP_PASS="<your-password>"
 - Label on all above: `TAM_DAY`
 - Workflow graph edges aligned to end-to-end patching + rollback model
 
-## Required AAP Objects (Expected by Script)
+## Required AAP Objects (Expected by Bootstrap Playbook)
 
-The script expects these existing objects in controller:
+The bootstrap playbook expects these existing objects in controller:
 
 - Organization: `Ansible Product Demos (APD)`
 - Inventories:
@@ -134,15 +154,15 @@ The script expects these existing objects in controller:
   - `Default execution environment`
   - `Cloud Services Execution Environment`
 
-If your controller uses different names, override environment variables before script run:
+If your controller uses different names, pass overrides as extra vars at launch:
 
 ```bash
-export ORG_NAME="..."
-export INVENTORY_MAIN_NAME="..."
-export INVENTORY_LOCAL_NAME="..."
-export AWS_SOURCE_NAME="..."
-export EE_DEFAULT_NAME="..."
-export EE_CLOUD_NAME="..."
+-e "org_name=..."
+-e "inventory_main_name=..."
+-e "inventory_local_name=..."
+-e "aws_source_name=..."
+-e "ee_default_name=..."
+-e "ee_cloud_name=..."
 ```
 
 ## Run the Demo
@@ -181,14 +201,14 @@ Use these to record a 6-8 minute demo and insert into Google Slides.
 - **Templates not visible in UI**  
   Clear filters and search by label `TAM_DAY`.
 
-- **Script fails on macOS bash**  
-  Current script is bash-3 compatible; rerun from repo root.
+- **Bootstrap template fails with missing AAP credentials**  
+  Provide `aap_url`, `aap_user`, and `aap_pass` as launch variables.
 
 - **Missing controller objects**  
   Script exits with object name; create it in AAP or override env variable names.
 
 - **Workflow node missing job template**  
-  Re-run `./scripts/setup_tam_day_aap.sh` (idempotent update path).
+  Re-run template `Bootstrap TAM_DAY AAP Assets` (idempotent update path).
 
 ## Security Notes
 

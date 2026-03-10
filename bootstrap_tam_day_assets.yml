@@ -1,0 +1,65 @@
+---
+- name: Bootstrap TAM_DAY AAP Assets
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    bootstrap_aap_url: "{{ aap_url | default(lookup('env', 'AAP_URL') | default('', true)) }}"
+    bootstrap_aap_user: "{{ aap_user | default(lookup('env', 'AAP_USER') | default('', true)) }}"
+    bootstrap_aap_pass: "{{ aap_pass | default(lookup('env', 'AAP_PASS') | default('', true)) }}"
+
+    bootstrap_org_name: "{{ org_name | default('Ansible Product Demos (APD)') }}"
+    bootstrap_project_name: "{{ project_name | default('TAM_DAY AAP Patching') }}"
+    bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/christiancruz11/aap_patching.git') }}"
+    bootstrap_project_scm_branch: "{{ project_scm_branch | default('tam') }}"
+
+    bootstrap_inventory_main_name: "{{ inventory_main_name | default('Ansible Product Demos Inventory') }}"
+    bootstrap_inventory_local_name: "{{ inventory_local_name | default('Demo Inventory') }}"
+    bootstrap_aws_source_name: "{{ aws_source_name | default('AWS Inventory') }}"
+
+    bootstrap_ee_default_name: "{{ ee_default_name | default('Default execution environment') }}"
+    bootstrap_ee_cloud_name: "{{ ee_cloud_name | default('Cloud Services Execution Environment') }}"
+
+    bootstrap_workflow_name: "{{ workflow_name | default('End to End Patching') }}"
+    bootstrap_template_label: "{{ template_label | default('TAM_DAY') }}"
+    bootstrap_workflow_extra_vars: |-
+      {{ workflow_extra_vars | default('_hosts: os_linux\nforce_failure_apply_patch: false') }}
+
+  tasks:
+    - name: Validate required inputs
+      ansible.builtin.assert:
+        that:
+          - bootstrap_aap_url | length > 0
+          - bootstrap_aap_user | length > 0
+          - bootstrap_aap_pass | length > 0
+        fail_msg: >-
+          Provide aap_url, aap_user, and aap_pass as extra vars at launch
+          (or as AAP_URL/AAP_USER/AAP_PASS env vars).
+
+    - name: Run TAM_DAY bootstrap script
+      ansible.builtin.command: ./scripts/setup_tam_day_aap.sh
+      args:
+        chdir: "{{ playbook_dir }}"
+      environment:
+        AAP_URL: "{{ bootstrap_aap_url }}"
+        AAP_USER: "{{ bootstrap_aap_user }}"
+        AAP_PASS: "{{ bootstrap_aap_pass }}"
+        ORG_NAME: "{{ bootstrap_org_name }}"
+        PROJECT_NAME: "{{ bootstrap_project_name }}"
+        PROJECT_SCM_URL: "{{ bootstrap_project_scm_url }}"
+        PROJECT_SCM_BRANCH: "{{ bootstrap_project_scm_branch }}"
+        INVENTORY_MAIN_NAME: "{{ bootstrap_inventory_main_name }}"
+        INVENTORY_LOCAL_NAME: "{{ bootstrap_inventory_local_name }}"
+        AWS_SOURCE_NAME: "{{ bootstrap_aws_source_name }}"
+        EE_DEFAULT_NAME: "{{ bootstrap_ee_default_name }}"
+        EE_CLOUD_NAME: "{{ bootstrap_ee_cloud_name }}"
+        WF_NAME: "{{ bootstrap_workflow_name }}"
+        TEMPLATE_LABEL: "{{ bootstrap_template_label }}"
+        WF_EXTRA_VARS: "{{ bootstrap_workflow_extra_vars }}"
+      register: bootstrap_result
+      changed_when: true
+
+    - name: Print bootstrap summary
+      ansible.builtin.debug:
+        var: bootstrap_result.stdout_lines
