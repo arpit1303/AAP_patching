@@ -29,9 +29,10 @@ AWS_SOURCE_NAME="${AWS_SOURCE_NAME:-AWS Inventory}"
 EE_DEFAULT_NAME="${EE_DEFAULT_NAME:-Default execution environment}"
 EE_CLOUD_NAME="${EE_CLOUD_NAME:-Cloud Services Execution Environment}"
 
-WF_NAME="${WF_NAME:-TAM_DAY | End to End Patching}"
+WF_NAME="${WF_NAME:-End to End Patching}"
 WF_EXTRA_VARS="${WF_EXTRA_VARS:-_hosts: os_linux
 force_failure_apply_patch: false}"
+TEMPLATE_LABEL="${TEMPLATE_LABEL:-TAM_DAY}"
 
 if [[ -z "${AAP_PASS}" ]]; then
   echo "Set AAP_PASS before running (example: export AAP_PASS='...')." >&2
@@ -55,6 +56,27 @@ api() {
       -X "$method" \
       "${AAP_URL}${path}"
   fi
+}
+
+to_var_key() {
+  echo "$1" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_'
+}
+
+set_kv() {
+  local prefix="$1"
+  local key="$2"
+  local value="$3"
+  local var
+  var="$(to_var_key "${prefix}_${key}")"
+  eval "${var}=\"\${value}\""
+}
+
+get_kv() {
+  local prefix="$1"
+  local key="$2"
+  local var
+  var="$(to_var_key "${prefix}_${key}")"
+  eval "printf '%s' \"\${${var}:-}\""
 }
 
 lookup_id_by_name() {
@@ -149,7 +171,11 @@ ensure_jt() {
     echo "Updated JT: ${name} (id=${jt_id})"
   fi
 
-  JT_IDS["$name"]="${jt_id}"
+  api POST "/api/controller/v2/job_templates/${jt_id}/labels/" \
+    "$(jq -n --arg n "${TEMPLATE_LABEL}" --argjson org "${ORG_ID}" '{name:$n,organization:$org}')" >/dev/null || true
+
+  set_kv "jt" "$name" "${jt_id}"
+  JT_COUNT=$((JT_COUNT + 1))
 }
 
 ensure_workflow() {
@@ -176,6 +202,9 @@ ensure_workflow() {
     echo "Updated workflow: ${WF_NAME} (id=${wf_id})"
   fi
 
+  api POST "/api/controller/v2/workflow_job_templates/${wf_id}/labels/" \
+    "$(jq -n --arg n "${TEMPLATE_LABEL}" --argjson org "${ORG_ID}" '{name:$n,organization:$org}')" >/dev/null || true
+
   WF_ID="${wf_id}"
 }
 
@@ -197,20 +226,20 @@ create_node() {
   payload="$(jq -n --argjson u "$ujt_id" --arg i "$identifier" '{unified_job_template:$u,identifier:$i}')"
   local node_id
   node_id="$(api POST "/api/controller/v2/workflow_job_templates/${WF_ID}/workflow_nodes/" "${payload}" | jq -r '.id')"
-  NODE_IDS["$key"]="${node_id}"
+  set_kv "node" "$key" "${node_id}"
 }
 
 link_nodes() {
   local from_key="$1"
   local relation="$2"
   local to_key="$3"
-  local from_id="${NODE_IDS[$from_key]}"
-  local to_id="${NODE_IDS[$to_key]}"
+  local from_id
+  local to_id
+  from_id="$(get_kv "node" "${from_key}")"
+  to_id="$(get_kv "node" "${to_key}")"
   api POST "/api/controller/v2/workflow_job_template_nodes/${from_id}/${relation}/" "$(jq -n --argjson id "$to_id" '{id:$id}')" >/dev/null
 }
-
-declare -A JT_IDS
-declare -A NODE_IDS
+JT_COUNT=0
 
 ORG_ID="$(lookup_id_by_name "/api/controller/v2/organizations/" "${ORG_NAME}")"
 INV_MAIN_ID="$(lookup_id_by_name "/api/controller/v2/inventories/" "${INVENTORY_MAIN_NAME}")"
@@ -228,38 +257,38 @@ done
 
 ensure_project
 
-ensure_jt "TAM_DAY | Create Snapshot" "snapshot_create.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "TAM_DAY | Pre Patch Task" "pre_patch_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "TAM_DAY | Pre App Tasks" "pre_app_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "TAM_DAY | Apply Patching" "apply_patching.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "TAM_DAY | Post Patching Task" "post_patch_tasks.yml" "${INV_MAIN_ID}" "null" ""
-ensure_jt "TAM_DAY | Post App Tasks" "post_app_tasks.yml" "${INV_MAIN_ID}" "null" ""
-ensure_jt "TAM_DAY | Delete Snapshot" "snapshot_delete.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "TAM_DAY | Generate Report" "generate_report.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "TAM_DAY | Create CR - Wait" "snow_create_cr_wait.yml" "${INV_LOCAL_ID}" "null" "localhost"
-ensure_jt "TAM_DAY | Create Incident Ticket" "snow_create_ticket.yml" "${INV_MAIN_ID}" "null" "os_linux"
-ensure_jt "TAM_DAY | Close CR" "snow_close_cr.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "TAM_DAY | Restore Snapshot" "snapshot_restore.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "TAM_DAY | Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost"
+ensure_jt "Create Snapshot" "snapshot_create.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
+ensure_jt "Pre Patch Task" "pre_patch_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
+ensure_jt "Pre App Tasks" "pre_app_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
+ensure_jt "Apply Patching" "apply_patching.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
+ensure_jt "Post Patching Task" "post_patch_tasks.yml" "${INV_MAIN_ID}" "null" ""
+ensure_jt "Post App Tasks" "post_app_tasks.yml" "${INV_MAIN_ID}" "null" ""
+ensure_jt "Delete Snapshot" "snapshot_delete.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
+ensure_jt "Generate Report" "generate_report.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
+ensure_jt "Create CR - Wait" "snow_create_cr_wait.yml" "${INV_LOCAL_ID}" "null" "localhost"
+ensure_jt "Create Incident Ticket" "snow_create_ticket.yml" "${INV_MAIN_ID}" "null" "os_linux"
+ensure_jt "Close CR" "snow_close_cr.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" ""
+ensure_jt "Restore Snapshot" "snapshot_restore.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
+ensure_jt "Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost"
 
 ensure_workflow
 delete_existing_nodes
 
-create_node "create_cr_wait" "${JT_IDS["TAM_DAY | Create CR - Wait"]}" "tam-day-create-cr-wait"
-create_node "create_snapshot" "${JT_IDS["TAM_DAY | Create Snapshot"]}" "tam-day-create-snapshot"
+create_node "create_cr_wait" "$(get_kv "jt" "Create CR - Wait")" "tam-day-create-cr-wait"
+create_node "create_snapshot" "$(get_kv "jt" "Create Snapshot")" "tam-day-create-snapshot"
 create_node "sync_before" "${AWS_SOURCE_ID}" "tam-day-aws-sync-before"
-create_node "pre_patch" "${JT_IDS["TAM_DAY | Pre Patch Task"]}" "tam-day-pre-patch"
-create_node "pre_app" "${JT_IDS["TAM_DAY | Pre App Tasks"]}" "tam-day-pre-app"
-create_node "apply_patch" "${JT_IDS["TAM_DAY | Apply Patching"]}" "tam-day-apply-patching"
-create_node "post_patch" "${JT_IDS["TAM_DAY | Post Patching Task"]}" "tam-day-post-patching"
-create_node "post_app" "${JT_IDS["TAM_DAY | Post App Tasks"]}" "tam-day-post-app"
-create_node "delete_snapshot" "${JT_IDS["TAM_DAY | Delete Snapshot"]}" "tam-day-delete-snapshot"
-create_node "generate_report" "${JT_IDS["TAM_DAY | Generate Report"]}" "tam-day-generate-report"
-create_node "close_cr" "${JT_IDS["TAM_DAY | Close CR"]}" "tam-day-close-cr"
-create_node "incident_early" "${JT_IDS["TAM_DAY | Create Incident Ticket"]}" "tam-day-incident-early"
-create_node "restore_snapshot" "${JT_IDS["TAM_DAY | Restore Snapshot"]}" "tam-day-restore-snapshot"
+create_node "pre_patch" "$(get_kv "jt" "Pre Patch Task")" "tam-day-pre-patch"
+create_node "pre_app" "$(get_kv "jt" "Pre App Tasks")" "tam-day-pre-app"
+create_node "apply_patch" "$(get_kv "jt" "Apply Patching")" "tam-day-apply-patching"
+create_node "post_patch" "$(get_kv "jt" "Post Patching Task")" "tam-day-post-patching"
+create_node "post_app" "$(get_kv "jt" "Post App Tasks")" "tam-day-post-app"
+create_node "delete_snapshot" "$(get_kv "jt" "Delete Snapshot")" "tam-day-delete-snapshot"
+create_node "generate_report" "$(get_kv "jt" "Generate Report")" "tam-day-generate-report"
+create_node "close_cr" "$(get_kv "jt" "Close CR")" "tam-day-close-cr"
+create_node "incident_early" "$(get_kv "jt" "Create Incident Ticket")" "tam-day-incident-early"
+create_node "restore_snapshot" "$(get_kv "jt" "Restore Snapshot")" "tam-day-restore-snapshot"
 create_node "sync_after" "${AWS_SOURCE_ID}" "tam-day-aws-sync-after"
-create_node "incident_after_restore" "${JT_IDS["TAM_DAY | Create Incident Ticket"]}" "tam-day-incident-after-restore"
+create_node "incident_after_restore" "$(get_kv "jt" "Create Incident Ticket")" "tam-day-incident-after-restore"
 
 link_nodes "create_cr_wait" "success_nodes" "create_snapshot"
 
@@ -298,4 +327,4 @@ echo
 echo "TAM_DAY assets are ready in ${AAP_URL}:"
 echo "- Project: ${PROJECT_NAME}"
 echo "- Workflow: ${WF_NAME}"
-echo "- Job templates: ${#JT_IDS[@]}"
+echo "- Job templates: ${JT_COUNT}"
