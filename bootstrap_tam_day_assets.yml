@@ -33,19 +33,21 @@
         if command -v jq >/dev/null 2>&1; then
           exit 0
         fi
-        if command -v microdnf >/dev/null 2>&1; then
-          microdnf install -y jq
+        JQ_TMP="/tmp/jq"
+        if [ -x "${JQ_TMP}" ]; then
           exit 0
         fi
-        if command -v dnf >/dev/null 2>&1; then
-          dnf install -y jq
+        if command -v curl >/dev/null 2>&1; then
+          curl -fsSL -o "${JQ_TMP}" "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+          chmod +x "${JQ_TMP}"
           exit 0
         fi
-        if command -v yum >/dev/null 2>&1; then
-          yum install -y jq
+        if command -v wget >/dev/null 2>&1; then
+          wget -qO "${JQ_TMP}" "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64"
+          chmod +x "${JQ_TMP}"
           exit 0
         fi
-        echo "No supported package manager found to install jq" >&2
+        echo "Unable to install jq: curl/wget not found" >&2
         exit 1
       args:
         executable: /bin/bash
@@ -66,6 +68,7 @@
       args:
         chdir: "{{ playbook_dir }}"
       environment:
+        PATH: "/tmp:{{ lookup('env', 'PATH') }}"
         AAP_URL: "{{ bootstrap_aap_url }}"
         AAP_USER: "{{ bootstrap_aap_user }}"
         AAP_PASS: "{{ bootstrap_aap_pass }}"
