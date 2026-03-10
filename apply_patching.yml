@@ -1,0 +1,72 @@
+---
+- name: Linux server patching
+  hosts: "{{ _hosts | default(omit) }}"
+  become: true
+  vars:
+    report_server: reports
+
+  tasks:
+
+  - name: Save the previous status
+    ansible.builtin.set_stats:
+      data:
+        patch_progress: "{{ patch_progress }}"
+        patch_stage: "{{ patch_stage }}"
+    run_once: yes
+
+  - name: Run only succeeded hosts
+    when: patch_progress[inventory_hostname] == 'success'
+    block:
+
+      - name: FORCE FAILURE FOR DEMO
+        ansible.builtin.fail:
+          msg: "Simulating a patching failure for demo purposes."
+        when: force_failure_apply_patch | default(false) | bool
+                
+      - name: Include patching role
+        ansible.builtin.include_role:
+          name: demo.patching.patch_linux
+
+      - name: Set Success Status
+        ansible.builtin.set_fact:
+          patch_prog:
+            - key: "{{ inventory_hostname }}"
+              value: 'success'
+          patch_stg:
+            - key: "{{ inventory_hostname }}"
+              value: apply_patching
+        
+      - name: Set_Stats Success Status
+        ansible.builtin.set_stats:
+          data:
+            patch_progress: "{{ patch_prog | items2dict }}"
+            patch_stage: "{{ patch_stg | items2dict }}"
+            patchingresult_dnf: "{{ patchingresult_dnf | default(omit) }}"
+            patchingresult_yum: "{{ patchingresult_yum | default(omit) }}"
+
+    rescue:
+      - name: Set Failure Status
+        ansible.builtin.set_fact:
+          patch_prog:
+            - key: "{{ inventory_hostname }}"
+              value: 'fail'
+          patch_stg:
+            - key: "{{ inventory_hostname }}"
+              value: apply_patching
+        
+      - name: Set_Stats Failure Status
+        ansible.builtin.set_stats:
+          data:
+            patch_progress: "{{ patch_prog | items2dict }}"
+            patch_stage: "{{ patch_stg | items2dict }}"
+
+      - name: Set Change Close Status
+        ansible.builtin.set_stats:
+          data:
+            cr_close_status: unsuccessful
+          aggregate: no
+
+      - name: Enforce Failure
+        ansible.builtin.fail:
+          msg: "Force to Fail"
+

@@ -1,0 +1,15 @@
+---
+- name: Slack Notification
+  hosts: all
+  connection: local
+  gather_facts: false
+  tasks:
+
+  vars:
+    slack_message: >-
+      The change has been closed with {{ cr_close_status }} result.
+      Please go to <http://{{ report_server }}/reports/linuxpatch.html>
+
+  roles:
+    - demo.process.slack
+  run_once: yes

@@ -1,0 +1,76 @@
+---
+- name: Post Application Tasks
+  hosts: "{{ _hosts | default(omit) }}"
+  become: true
+  vars:
+    app_role_name: "demo.application.{{ app_deployment }}"
+
+  tasks:
+  - name: Save the previous status
+    ansible.builtin.set_stats:
+      data:
+        patch_progress: "{{ patch_progress }}"
+        patch_stage: "{{ patch_stage }}"
+    run_once: yes
+
+  - name: Run only succeeded hosts
+    when: patch_progress[inventory_hostname] == 'success'
+    block:
+      - name: Make Fail for Demo purpose
+        ansible.builtin.include_role:
+          name: "{{ app_role_name }}"
+          tasks_from: break_app.yml
+        when: 
+          - host_to_fail_post_app_tasks is defined
+          - host_to_fail_post_app_tasks == inventory_hostname
+
+      - name: Post Patch | Start {{ app_deployment }} Application
+        ansible.builtin.include_role:
+          name: "{{ app_role_name }}"
+          tasks_from: start_service.yml
+
+      - name: Post Patch | Verify {{ app_deployment }} Application
+        ansible.builtin.include_role:
+          name: "{{ app_role_name }}"
+          tasks_from: test.yml
+
+      - name: Set Successful Status
+        ansible.builtin.set_fact:
+          patch_prog:
+            - key: "{{ inventory_hostname }}"
+              value: 'success'
+          patch_stg:
+            - key: "{{ inventory_hostname }}"
+              value: complete
+        
+      - name: Set_Stats Successful Status
+        ansible.builtin.set_stats:
+          data:
+            patch_progress: "{{ patch_prog | items2dict }}"
+            patch_stage: "{{ patch_stg | items2dict }}"
+
+    rescue:
+      - name: Set Failure Status
+        ansible.builtin.set_fact:
+          patch_prog:
+            - key: "{{ inventory_hostname }}"
+              value: 'fail'
+          patch_stg:
+            - key: "{{ inventory_hostname }}"
+              value: post_app_tasks
+        
+      - name: Set_Stats Failure Status
+        ansible.builtin.set_stats:
+          data:
+            patch_progress: "{{ patch_prog | items2dict }}"
+            patch_stage: "{{ patch_stg | items2dict }}"
+
+      - name: Set Change Close Status
+        ansible.builtin.set_stats:
+          data:
+            cr_close_status: unsuccessful
+          aggregate: no
+
+      - name: Enforce Failure
+        ansible.builtin.fail:
+          msg: "Force to Fail"

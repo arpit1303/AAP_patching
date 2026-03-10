@@ -1,0 +1,14 @@
+---
+- name: Close a change request
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    servicenow_cr: close
+    close_code: "{{ cr_close_status |default('successful')}}"
+    close_notes: "Change is closed with {{ cr_close_status |default('successful')}} patching"
+
+  roles:
+    - demo.process.snow_change_request
+  run_once: yes

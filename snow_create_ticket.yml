@@ -1,0 +1,29 @@
+---
+- name: Create an incident in ServiceNow using facts from a host
+  hosts: "{{ vm_name | default('all')}}"
+  gather_facts: false
+  connection: local
+
+  pre_tasks:
+  - name: Set variables
+    ansible.builtin.set_fact:
+      servicenow_ticket: create
+      incident_description: "Patch has been failed"
+      sn_description: |-
+        Patch has been failed with the following servers and restored from snapshot successfully!!
+        hostname | failed Stage
+        --------------------------
+        {{ failed_hosts }}
+    vars:
+      failed_hosts: >-
+        {% for host in groups['os_linux'] %}
+        {{ host  if ( patch_progress[host] == 'fail' ) }}
+        {{ '| ' if ( patch_progress[host] == 'fail' ) }}
+        {{ patch_stage[host] if ( patch_progress[host] == 'fail' ) }}
+        {% endfor %}
+      
+    run_once: yes
+
+  roles:
+    - demo.process.snow_ticket
+  run_once: yes

@@ -1,0 +1,17 @@
+---
+- name: Restoring VM Snapshot
+  hosts: "{{ _hosts | default(omit) }}"
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+    - name: Include Cloud role
+      ansible.builtin.include_role:
+        name: demo.cloud.aws
+        tasks_from: restore_vm
+      when: 
+        - patch_progress[inventory_hostname] == 'fail'
+        - patch_stage[inventory_hostname] == 'post_patch_tasks' or 
+          patch_stage[inventory_hostname] == 'post_app_tasks' or
+          patch_stage[inventory_hostname] == 'apply_patching'

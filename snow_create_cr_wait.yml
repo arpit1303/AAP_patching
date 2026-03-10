@@ -1,0 +1,15 @@
+---
+- name: Create a change request
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  vars:
+    servicenow_cr: create_wait
+    cr_short_description: "Patch Change Request"
+    cr_description: "{{ change_owner | default('Ansible') }} requests {{ groups['all'] }} servers in {{ change_environment | default('Dev') }} to patch }}"
+
+  roles:
+    - demo.process.snow_change_request
+
+

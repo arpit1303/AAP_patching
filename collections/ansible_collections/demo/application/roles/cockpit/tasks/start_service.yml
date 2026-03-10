@@ -1,0 +1,6 @@
+---
+- name: Ensure Cockpit Web Console is started
+  service:
+    name: "{{ __cockpit_daemon }}"
+    enabled: "{{ cockpit_enabled | bool }}"
+    state: started
