@@ -36,4 +36,4 @@
       ansible.builtin.debug:
         msg:
           - "Connected to {{ validate_servicenow_host }}"
-          - "Returned records: {{ servicenow_validation.json.result | length }}"
+          - "Returned records: {{ servicenow_validation.json.result | default([]) | length }}"
