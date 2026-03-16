@@ -26,10 +26,9 @@
   ansible.builtin.include_role:
     name: demo.process.slack
   vars:
-    slack_message: |-
-      {% for host in groups['all'] %}@{{hostvars[host].app_owner}} {% endfor %}
-      A change request has been raised for your servers.
-      Please click on this URL to review: <{{ lookup('ansible.builtin.env', 'SN_HOST') }}/nav_to.do?uri=change_request.do?sysparm_query=number={{request.record.number }}>
+    slack_message: >-
+      ServiceNow change request {{ request.record.number }} has been created and is waiting for approval.
+      Review it here: <{{ lookup('ansible.builtin.env', 'SN_HOST') }}nav_to.do?uri=change_request.do?sysparm_query=number={{ request.record.number }}>
 
 
 # - name: Send Approval e-mail
@@ -53,6 +52,13 @@
   delay: 10
   register: change_request_status
   delegate_to: localhost
+
+- name: Notify Slack about approved change request
+  ansible.builtin.include_role:
+    name: demo.process.slack
+  vars:
+    slack_message: >-
+      ServiceNow change request {{ request.record.number }} has been approved and moved to scheduled.
 
 - name: Update to implement the change request in ServiceNow
   servicenow.itsm.change_request:

@@ -17,3 +17,11 @@
 - name: Display incident number
   ansible.builtin.debug:
     var: new_incident.record.number
+
+- name: Notify Slack about created incident
+  ansible.builtin.include_role:
+    name: demo.process.slack
+  vars:
+    slack_message: >-
+      ServiceNow incident {{ new_incident.record.number }} has been created.
+      Review it here: <{{ lookup('ansible.builtin.env', 'SN_HOST') }}nav_to.do?uri=incident.do?sysparm_query=number={{ new_incident.record.number }}>

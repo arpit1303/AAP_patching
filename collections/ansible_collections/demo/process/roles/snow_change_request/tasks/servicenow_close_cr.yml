@@ -12,3 +12,10 @@
     close_code: "{{ close_code }}"
     close_notes: "{{ close_notes }}"
   delegate_to: localhost
+
+- name: Notify Slack about closed change request
+  ansible.builtin.include_role:
+    name: demo.process.slack
+  vars:
+    slack_message: >-
+      ServiceNow change request {{ change_request_number }} has been closed with code {{ close_code }}.

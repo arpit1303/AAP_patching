@@ -7,6 +7,7 @@ Production-style Red Hat Ansible Automation Platform (AAP) patching workflow for
 - application-aware patch windows
 - AWS snapshot rollback path
 - incident + change closure integration
+- Slack notifications for change, incident, and approval events
 - report generation
 
 This repository is based on the working demo pattern from `christiancruz11/aap_patching` and adapted for `tam_arpit` workflows and `TAM_DAY` labeling in AAP.
@@ -17,7 +18,16 @@ This repository is based on the working demo pattern from `christiancruz11/aap_p
 - **Resilient execution:** snapshots before patching, rollback on failure
 - **Operational safety:** pre/post OS and app tasks
 - **Traceability:** incident creation on failure path, CR closure on completion
+- **Notifications:** ServiceNow approval, incident, and closure events can be mirrored into any Slack workspace through a webhook
 - **Visibility:** generated patching report
+
+## What Was Optimized
+
+- Controller-side `extra_vars` are generated from code instead of maintained manually in AAP.
+- ServiceNow integration is encapsulated as reusable AAP templates for credential setup and connectivity validation.
+- Slack notification delivery is now generic and webhook-based, so any Slack workspace can consume the workflow events without editing role code.
+- Local laptop bootstrap is reduced to dependency install, syntax validation, and AAP asset bootstrap through versioned scripts.
+- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `TAM_DAY`-labeled templates rather than tribal knowledge.
 
 ## Workflow Stages
 
@@ -56,7 +66,9 @@ Failure branches trigger:
 ├── collections/
 │   └── ansible_collections/demo/...
 ├── bootstrap_tam_day_assets.yml
+├── env_slack_*.yml
 ├── scripts/
+│   ├── setup_local_demo.sh
 │   └── setup_tam_day_aap.sh
 └── demo_assets/
     ├── end_to_end_patching_video_script.md
@@ -100,6 +112,52 @@ Install required external collections:
 ansible-galaxy collection install -r collections/requirements.yml
 ```
 
+Or use the local wrapper:
+
+```bash
+./scripts/setup_local_demo.sh
+```
+
+This runs dependency validation, installs the required collections, and syntax-checks the local bootstrap content.
+
+If you prefer `make`, optional wrapper targets are also provided:
+
+```bash
+make deps
+make validate
+```
+
+## Run From a Fork
+
+If someone forks this repository, they can use it without the original demo estate. The minimum path is:
+
+1. Fork the repo in GitHub.
+2. Clone the fork locally.
+3. Run `./scripts/setup_local_demo.sh`.
+4. Point AAP project SCM to the fork and branch.
+5. Run the local bootstrap command below or launch `Bootstrap TAM_DAY AAP Assets` from AAP.
+6. Use the generated `TAM_DAY` environment templates to build AWS, ServiceNow, Slack, and host prep.
+7. Launch `End to End Patching`.
+
+The only required external accounts are:
+
+- an AAP controller
+- an AWS account with permissions to create keypairs, VPC resources, and EC2 instances
+- a ServiceNow instance
+- a Slack incoming webhook in the workspace/channel you want to notify
+
+Local bootstrap command:
+
+```bash
+export AAP_URL="https://<your-aap-controller>"
+export AAP_USER="admin"
+export AAP_PASS="<your-password>"
+ansible-playbook bootstrap_tam_day_assets.yml \
+  -e "aap_url=${AAP_URL}" \
+  -e "aap_user=${AAP_USER}" \
+  -e "aap_pass=${AAP_PASS}"
+```
+
 ## Bootstrap AAP Templates + Workflow (AAP Job Template)
 
 Automate bootstrap through an AAP Job Template using playbook `bootstrap_tam_day_assets.yml`.
@@ -141,6 +199,17 @@ change_environment_name: "Dev"
 - Project: `TAM_DAY AAP Patching`
   Source: `https://github.com/arpit1303/AAP_patching` branch `tam_arpit`
 - Job Templates: source-consistent names (`Create Snapshot`, `Apply Patching`, etc.)
+- Environment Templates:
+  - `Environment | AWS | Create Keypair`
+  - `Environment | AWS | Create Network`
+  - `Environment | AWS | Create VM`
+  - `Environment | Inventory | Set App Deployment`
+  - `Environment | Linux | Prepare Web Hosts`
+  - `Environment | Linux | Prepare DB Hosts`
+  - `Environment | ServiceNow | Configure AAP Credential`
+  - `Environment | ServiceNow | Validate Instance`
+  - `Environment | Slack | Configure AAP Credential`
+  - `Environment | Slack | Validate Webhook`
 - Workflow Template: `End to End Patching`
 - Label on all above: `TAM_DAY`
 - Template-level `extra_vars` that were previously maintained manually in AAP
@@ -256,6 +325,8 @@ Recommended order:
 7. `Environment | Linux | Prepare DB Hosts`
 8. `Environment | ServiceNow | Configure AAP Credential`
 9. `Environment | ServiceNow | Validate Instance`
+10. `Environment | Slack | Configure AAP Credential`
+11. `Environment | Slack | Validate Webhook`
 
 ### Generate SSH key locally
 
@@ -340,6 +411,7 @@ app_deployment: "database"
 - AWS templates should be launched with an AWS credential attached.
 - Linux host prep templates should be launched with your machine credential for the EC2 hosts.
 - `Environment | Inventory | Set App Deployment` uses controller credentials passed at launch as variables.
+- `Environment | Slack | Validate Webhook` should be launched with the `Slack Webhook` credential attached, unless `slack_webhook_url` is passed directly at launch.
 
 ## ServiceNow Setup
 
@@ -396,6 +468,116 @@ servicenow_validate_certs: true
 - Incident and change operations are executed through the `servicenow.itsm` collection
 - If your instance uses different approval groups or workflow states, adjust the files under `collections/ansible_collections/demo/process/roles/`
 
+## Slack Setup
+
+Slack delivery is now generic. It uses an incoming webhook credential, so the same repo works with any Slack workspace where you can create a webhook.
+
+### Create the Slack webhook
+
+1. Create or select a Slack app in the target workspace.
+2. Enable Incoming Webhooks.
+3. Add a webhook for the target channel.
+4. Copy the webhook URL.
+5. Decide whether to keep the default destination channel at the webhook level or override it in AAP with `slack_channel`.
+
+### Slack templates created by bootstrap
+
+- `Environment | Slack | Configure AAP Credential`
+  Creates or updates the custom `Slack Webhook` credential type and the `Slack Webhook` credential in AAP.
+  Defaults:
+
+```yaml
+controller_url: "https://<your-aap-controller>"
+controller_user: "admin"
+controller_pass: "<your-password>"
+organization_name: "Ansible Product Demos (APD)"
+slack_credential_name: "Slack Webhook"
+slack_webhook_url: "https://hooks.slack.com/services/..."
+slack_channel: "patching"
+slack_username: "AAP"
+```
+
+- `Environment | Slack | Validate Webhook`
+  Sends a test message to the webhook.
+  Defaults:
+
+```yaml
+slack_message: "TAM_DAY Slack webhook validation message"
+```
+
+### What goes to Slack
+
+When the Slack credential is attached to the workflow-related templates, these events are pushed to Slack:
+
+- change request created and waiting for approval
+- change request approved
+- incident created
+- change request closed
+
+This allows approval and operations status to be followed from Slack while the source of truth remains ServiceNow.
+
+## Step-by-Step Demo Execution
+
+### Scenario 1: Full green-path demo
+
+1. Run all environment templates in the recommended order.
+2. Verify the 4 EC2 instances exist in inventory.
+3. Verify app hosts have `app_deployment: web` and DB hosts have `app_deployment: database`.
+4. Validate ServiceNow connectivity.
+5. Validate Slack delivery.
+6. Launch `End to End Patching` with:
+
+```yaml
+_hosts: os_linux
+force_failure_apply_patch: false
+```
+
+Expected outcome:
+
+- ServiceNow CR created
+- Slack approval/request notifications sent
+- snapshots created
+- pre/app/post checks complete
+- report generated
+- CR closed
+
+### Scenario 2: Rollback and incident path
+
+Launch `End to End Patching` with:
+
+```yaml
+_hosts: os_linux
+force_failure_apply_patch: true
+```
+
+Expected outcome:
+
+- patching fails at the controlled failure point
+- snapshot restore path runs
+- incident is created in ServiceNow
+- incident notification is sent to Slack
+- report and closure logic complete according to workflow branch design
+
+### Scenario 3: ServiceNow and Slack validation only
+
+1. Launch `Environment | ServiceNow | Configure AAP Credential`
+2. Launch `Environment | ServiceNow | Validate Instance`
+3. Launch `Environment | Slack | Configure AAP Credential`
+4. Launch `Environment | Slack | Validate Webhook`
+
+Use this path to validate integrations before provisioning AWS or running the full patching workflow.
+
+### Scenario 4: AWS and host preparation only
+
+1. Create keypair.
+2. Create network.
+3. Create four VMs.
+4. Set `app_deployment` values.
+5. Prepare web hosts.
+6. Prepare DB hosts.
+
+Use this when you want to prove the environment automation independently of patching governance.
+
 ## Professional Demo Assets
 
 Prepared presentation assets are available in:
@@ -422,9 +604,15 @@ Use these to record a 6-8 minute demo and insert into Google Slides.
 - **Workflow node missing job template**  
   Re-run template `Bootstrap TAM_DAY AAP Assets` (idempotent update path).
 
+- **Slack messages do not appear**  
+  Re-run `Environment | Slack | Validate Webhook` and confirm the webhook URL, workspace app permissions, and optional `slack_channel` override.
+
+- **ServiceNow records are created but Slack is silent**  
+  Confirm the `Slack Webhook` credential is attached to `Create CR - Wait`, `Create CR - Wait (Slack)`, `Create Incident Ticket`, and `Close CR`.
+
 ## Security Notes
 
-- Do not commit AAP, AWS, or ServiceNow credentials.
+- Do not commit AAP, AWS, ServiceNow, or Slack webhook credentials.
 - Prefer AAP credentials store and encrypted secrets.
 - Rotate demo credentials after workshops.
 

@@ -23,5 +23,5 @@
     name: demo.process.slack
   vars:
     slack_message: >-
-      An Incident ticket has been created. 
-      Please click on this URL to review: <{{ lookup('ansible.builtin.env', 'SN_HOST') }}/nav_to.do?uri=incident.do?sysparm_query=number={{new_incident.record.number}}>
+      ServiceNow incident {{ new_incident.record.number }} has been created.
+      Review it here: <{{ lookup('ansible.builtin.env', 'SN_HOST') }}nav_to.do?uri=incident.do?sysparm_query=number={{ new_incident.record.number }}>

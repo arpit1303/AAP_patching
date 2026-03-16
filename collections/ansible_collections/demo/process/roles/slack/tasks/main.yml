@@ -1,19 +1,18 @@
 ---
-- name: Make sure slack token is provided
-  ansible.builtin.assert:
-    that: 
-      - slack_token is defined
-      - aap_base_url is defined
-      - slack_channel_name is defined
-      - slack_message_type is defined
+- name: Skip Slack notification when webhook is not configured
+  ansible.builtin.debug:
+    msg: "SLACK_WEBHOOK_URL is not configured; skipping Slack notification."
+  when: not slack_enabled | bool
 
-- name: Send notification message via Slack
-  community.general.slack:
-    token: "{{ slack_token }}"
-    msg: "{{ slack_message }}"
-    channel: '#{{ slack_channel_name }}'
-    username: "{{ slack_username }}"
-    parse: 'none'
-  # when: slack_message_type == 'pull_request'
-
+- name: Send notification message via Slack webhook
+  ansible.builtin.uri:
+    url: "{{ slack_webhook_url }}"
+    method: POST
+    body_format: json
+    body:
+      text: "{{ slack_message }}"
+      username: "{{ slack_username }}"
+      channel: "{{ ('#' ~ slack_channel_name) if slack_channel_name | length > 0 else omit }}"
+    status_code: 200
+  when: slack_enabled | bool
 

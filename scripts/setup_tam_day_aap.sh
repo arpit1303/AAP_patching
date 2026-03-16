@@ -25,6 +25,7 @@ PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-tam_arpit}"
 INVENTORY_MAIN_NAME="${INVENTORY_MAIN_NAME:-Ansible Product Demos Inventory}"
 INVENTORY_LOCAL_NAME="${INVENTORY_LOCAL_NAME:-Demo Inventory}"
 AWS_SOURCE_NAME="${AWS_SOURCE_NAME:-AWS Inventory}"
+SLACK_CREDENTIAL_NAME="${SLACK_CREDENTIAL_NAME:-Slack Webhook}"
 
 EE_DEFAULT_NAME="${EE_DEFAULT_NAME:-Default execution environment}"
 EE_CLOUD_NAME="${EE_CLOUD_NAME:-Cloud Services Execution Environment}"
@@ -277,6 +278,20 @@ link_nodes() {
   to_id="$(get_kv "node" "${to_key}")"
   api POST "/api/controller/v2/workflow_job_template_nodes/${from_id}/${relation}/" "$(jq -n --argjson id "$to_id" '{id:$id}')" >/dev/null
 }
+
+attach_credential_by_name() {
+  local template_name="$1"
+  local credential_name="$2"
+  local jt_id
+  local credential_id
+
+  jt_id="$(get_kv "jt" "${template_name}")"
+  credential_id="$(lookup_id_by_name "/api/controller/v2/credentials/" "${credential_name}")"
+
+  if [[ -n "${jt_id}" && -n "${credential_id}" ]]; then
+    api POST "/api/controller/v2/job_templates/${jt_id}/credentials/" "$(jq -n --argjson id "$credential_id" '{id:$id}')" >/dev/null || true
+  fi
+}
 JT_COUNT=0
 
 ORG_ID="$(lookup_id_by_name "/api/controller/v2/organizations/" "${ORG_NAME}")"
@@ -342,6 +357,17 @@ servicenow_host: https://dev366437.service-now.com/
 servicenow_username: admin
 servicenow_password: ''" "true" "false"
 ensure_jt "Environment | ServiceNow | Validate Instance" "env_servicenow_validate_instance.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "servicenow_validate_certs: true" "true" "true"
+ensure_jt "Environment | Slack | Configure AAP Credential" "env_slack_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: Ansible Product Demos (APD)
+slack_credential_name: Slack Webhook
+slack_webhook_url: ''
+slack_channel: patching
+slack_username: AAP" "true" "false"
+ensure_jt "Environment | Slack | Validate Webhook" "env_slack_validate_webhook.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "slack_message: TAM_DAY Slack webhook validation message" "true" "true"
+
+attach_credential_by_name "Create CR - Wait" "${SLACK_CREDENTIAL_NAME}"
+attach_credential_by_name "Create CR - Wait (Slack)" "${SLACK_CREDENTIAL_NAME}"
+attach_credential_by_name "Create Incident Ticket" "${SLACK_CREDENTIAL_NAME}"
+attach_credential_by_name "Close CR" "${SLACK_CREDENTIAL_NAME}"
 
 ensure_workflow
 delete_existing_nodes
