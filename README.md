@@ -131,6 +131,8 @@ aap_user: "admin"
 aap_pass: "<your-password>"
 template_label: "TAM_DAY"
 workflow_name: "End to End Patching"
+patch_target_hosts: "os_linux"
+report_server_host: "rhel9app"
 ```
 
 ### What the bootstrap template creates
@@ -139,7 +141,60 @@ workflow_name: "End to End Patching"
 - Job Templates: source-consistent names (`Create Snapshot`, `Apply Patching`, etc.)
 - Workflow Template: `End to End Patching`
 - Label on all above: `TAM_DAY`
+- Template-level `extra_vars` that were previously maintained manually in AAP
 - Workflow graph edges aligned to end-to-end patching + rollback model
+
+### Encapsulated template extra vars
+
+The bootstrap automation now writes the controller-side `extra_vars` directly into the `TAM_DAY` templates so they can be recreated from code.
+
+- `Create Snapshot`
+  Sets `_hosts: os_linux` and initializes `patch_progress` / `patch_stage` for `rhel8app`, `rhel8db`, `rhel9app`, and `rhel9db`.
+- `Pre Patch Task`
+  Sets `_hosts: os_linux`.
+- `Pre App Tasks`
+  Sets `_hosts: os_linux`.
+- `Post Patching Task`
+  Sets `_hosts: os_linux`.
+- `Post App Tasks`
+  Sets `_hosts: os_linux`.
+- `Generate Report`
+  Sets `_hosts: os_linux` and `report_server: rhel9app`.
+- `Create CR - Wait`
+  Sets the ServiceNow `cr_short_description` and `cr_description`.
+- `End to End Patching`
+  Sets workflow `extra_vars` to:
+
+```yaml
+_hosts: os_linux
+force_failure_apply_patch: true
+```
+
+### Override the encapsulated defaults
+
+You can override these values when launching `Bootstrap TAM_DAY AAP Assets`:
+
+```yaml
+patch_target_hosts: "os_linux"
+report_server_host: "rhel9app"
+cr_short_description: "Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db"
+cr_description: "TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in {{ change_environment | default('Dev') }} to patch"
+workflow_extra_vars: |
+  _hosts: os_linux
+  force_failure_apply_patch: true
+create_snapshot_extra_vars: |
+  _hosts: os_linux
+  patch_progress:
+    rhel8app: success
+    rhel8db: success
+    rhel9app: success
+    rhel9db: success
+  patch_stage:
+    rhel8app: snapshot_create
+    rhel8db: snapshot_create
+    rhel9app: snapshot_create
+    rhel9db: snapshot_create
+```
 
 ## Required AAP Objects (Expected by Bootstrap Playbook)
 
@@ -174,7 +229,7 @@ If your controller uses different names, pass overrides as extra vars at launch:
 
 ```yaml
 _hosts: os_linux
-force_failure_apply_patch: false
+force_failure_apply_patch: true
 ```
 
 To demonstrate failure/rollback path:

@@ -24,7 +24,13 @@
     bootstrap_workflow_name: "{{ workflow_name | default('End to End Patching') }}"
     bootstrap_template_label: "{{ template_label | default('TAM_DAY') }}"
     bootstrap_workflow_extra_vars: |-
-      {{ workflow_extra_vars | default('_hosts: os_linux\nforce_failure_apply_patch: false') }}
+      {{ workflow_extra_vars | default('_hosts: os_linux\nforce_failure_apply_patch: true') }}
+    bootstrap_patch_target_hosts: "{{ patch_target_hosts | default('os_linux') }}"
+    bootstrap_report_server_host: "{{ report_server_host | default('rhel9app') }}"
+    bootstrap_cr_short_description: "{{ cr_short_description | default('Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db') }}"
+    bootstrap_cr_description: "{{ cr_description | default(\"TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in {{ change_environment | default('Dev') }} to patch\") }}"
+    bootstrap_create_snapshot_extra_vars: |-
+      {{ create_snapshot_extra_vars | default('_hosts: os_linux\npatch_progress:\n  rhel8app: success\n  rhel8db: success\n  rhel9app: success\n  rhel9db: success\npatch_stage:\n  rhel8app: snapshot_create\n  rhel8db: snapshot_create\n  rhel9app: snapshot_create\n  rhel9db: snapshot_create') }}
 
   tasks:
     - name: Ensure jq is available in execution environment
@@ -84,6 +90,11 @@
         WF_NAME: "{{ bootstrap_workflow_name }}"
         TEMPLATE_LABEL: "{{ bootstrap_template_label }}"
         WF_EXTRA_VARS: "{{ bootstrap_workflow_extra_vars }}"
+        PATCH_TARGET_HOSTS: "{{ bootstrap_patch_target_hosts }}"
+        REPORT_SERVER_HOST: "{{ bootstrap_report_server_host }}"
+        CR_SHORT_DESCRIPTION: "{{ bootstrap_cr_short_description }}"
+        CR_DESCRIPTION: "{{ bootstrap_cr_description }}"
+        CREATE_SNAPSHOT_EXTRA_VARS: "{{ bootstrap_create_snapshot_extra_vars }}"
       register: bootstrap_result
       changed_when: true
 

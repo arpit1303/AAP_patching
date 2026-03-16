@@ -31,8 +31,26 @@ EE_CLOUD_NAME="${EE_CLOUD_NAME:-Cloud Services Execution Environment}"
 
 WF_NAME="${WF_NAME:-End to End Patching}"
 WF_EXTRA_VARS="${WF_EXTRA_VARS:-_hosts: os_linux
-force_failure_apply_patch: false}"
+force_failure_apply_patch: true}"
 TEMPLATE_LABEL="${TEMPLATE_LABEL:-TAM_DAY}"
+
+PATCH_TARGET_HOSTS="${PATCH_TARGET_HOSTS:-os_linux}"
+REPORT_SERVER_HOST="${REPORT_SERVER_HOST:-rhel9app}"
+CHANGE_TARGET_HOSTS="${CHANGE_TARGET_HOSTS:-rhel8app, rhel8db, rhel9app, rhel9db}"
+CHANGE_OWNER_NAME="${CHANGE_OWNER_NAME:-TAM}"
+CR_SHORT_DESCRIPTION="${CR_SHORT_DESCRIPTION:-Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db}"
+CR_DESCRIPTION="${CR_DESCRIPTION:-TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in {{ change_environment | default('Dev') }} to patch}"
+CREATE_SNAPSHOT_EXTRA_VARS="${CREATE_SNAPSHOT_EXTRA_VARS:-_hosts: os_linux
+patch_progress:
+  rhel8app: success
+  rhel8db: success
+  rhel9app: success
+  rhel9db: success
+patch_stage:
+  rhel8app: snapshot_create
+  rhel8db: snapshot_create
+  rhel9app: snapshot_create
+  rhel9db: snapshot_create}"
 
 if [[ -z "${AAP_PASS}" ]]; then
   echo "Set AAP_PASS before running (example: export AAP_PASS='...')." >&2
@@ -124,6 +142,7 @@ ensure_jt() {
   local inventory_id="$3"
   local ee_id="$4"
   local limit="$5"
+  local extra_vars="$6"
 
   local jt_id
   jt_id="$(lookup_id_by_name "/api/controller/v2/job_templates/" "${name}")"
@@ -134,6 +153,7 @@ ensure_jt() {
       --arg name "$name" \
       --arg playbook "$playbook" \
       --arg limit "$limit" \
+      --arg extra_vars "$extra_vars" \
       --argjson inventory "$inventory_id" \
       --argjson project "$PROJECT_ID" \
       '{
@@ -142,13 +162,15 @@ ensure_jt() {
         inventory: $inventory,
         project: $project,
         playbook: $playbook,
-        limit: $limit
+        limit: $limit,
+        extra_vars: $extra_vars
       }')"
   else
     payload="$(jq -n \
       --arg name "$name" \
       --arg playbook "$playbook" \
       --arg limit "$limit" \
+      --arg extra_vars "$extra_vars" \
       --argjson inventory "$inventory_id" \
       --argjson project "$PROJECT_ID" \
       --argjson ee "$ee_id" \
@@ -159,7 +181,8 @@ ensure_jt() {
         project: $project,
         playbook: $playbook,
         execution_environment: $ee,
-        limit: $limit
+        limit: $limit,
+        extra_vars: $extra_vars
       }')"
   fi
 
@@ -257,19 +280,22 @@ done
 
 ensure_project
 
-ensure_jt "Create Snapshot" "snapshot_create.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "Pre Patch Task" "pre_patch_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "Pre App Tasks" "pre_app_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "Apply Patching" "apply_patching.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "Post Patching Task" "post_patch_tasks.yml" "${INV_MAIN_ID}" "null" ""
-ensure_jt "Post App Tasks" "post_app_tasks.yml" "${INV_MAIN_ID}" "null" ""
-ensure_jt "Delete Snapshot" "snapshot_delete.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "Generate Report" "generate_report.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "Create CR - Wait" "snow_create_cr_wait.yml" "${INV_LOCAL_ID}" "null" "localhost"
-ensure_jt "Create Incident Ticket" "snow_create_ticket.yml" "${INV_MAIN_ID}" "null" "os_linux"
-ensure_jt "Close CR" "snow_close_cr.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" ""
-ensure_jt "Restore Snapshot" "snapshot_restore.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" ""
-ensure_jt "Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost"
+ensure_jt "Create Snapshot" "snapshot_create.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" "" "${CREATE_SNAPSHOT_EXTRA_VARS}"
+ensure_jt "Pre Patch Task" "pre_patch_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: ${PATCH_TARGET_HOSTS}"
+ensure_jt "Pre App Tasks" "pre_app_tasks.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: ${PATCH_TARGET_HOSTS}"
+ensure_jt "Apply Patching" "apply_patching.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" ""
+ensure_jt "Post Patching Task" "post_patch_tasks.yml" "${INV_MAIN_ID}" "null" "" "_hosts: ${PATCH_TARGET_HOSTS}"
+ensure_jt "Post App Tasks" "post_app_tasks.yml" "${INV_MAIN_ID}" "null" "" "_hosts: ${PATCH_TARGET_HOSTS}"
+ensure_jt "Delete Snapshot" "snapshot_delete.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" "" ""
+ensure_jt "Generate Report" "generate_report.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: ${PATCH_TARGET_HOSTS}
+report_server: ${REPORT_SERVER_HOST}"
+ensure_jt "Create CR - Wait" "snow_create_cr_wait.yml" "${INV_LOCAL_ID}" "null" "localhost" "cr_short_description: ${CR_SHORT_DESCRIPTION}
+cr_description: >-
+  ${CR_DESCRIPTION}"
+ensure_jt "Create Incident Ticket" "snow_create_ticket.yml" "${INV_MAIN_ID}" "null" "os_linux" ""
+ensure_jt "Close CR" "snow_close_cr.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "" ""
+ensure_jt "Restore Snapshot" "snapshot_restore.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" "" ""
+ensure_jt "Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" ""
 
 ensure_workflow
 delete_existing_nodes
