@@ -40,7 +40,7 @@ The `End to End Patching` workflow orchestrates these templates:
 Failure branches trigger:
 
 1. `Restore Snapshot`
-2. inventory sync
+2. `Inventory sync`
 3. `Create Incident Ticket`
 
 ## Repository Layout
