@@ -79,4 +79,4 @@ Narration:
 - Keep zoom at 110-125% for readability.
 - Pause 1 second before each node explanation.
 - Use a stable cursor path; avoid rapid mouse movement.
-- Highlight labels (`TAM_DAY`) to identify demo assets quickly.
+- Highlight labels (`AAP_Patch`) to identify demo assets quickly.

@@ -8,7 +8,7 @@
     validate_slack_webhook_url: "{{ slack_webhook_url | default(lookup('env', 'SLACK_WEBHOOK_URL') | default('', true)) }}"
     validate_slack_channel: "{{ slack_channel | default(lookup('env', 'SLACK_CHANNEL') | default('', true)) }}"
     validate_slack_username: "{{ slack_username | default(lookup('env', 'SLACK_USERNAME') | default('AAP', true)) }}"
-    validate_slack_message: "{{ slack_message | default('TAM_DAY Slack webhook validation message') }}"
+    validate_slack_message: "{{ slack_message | default('AAP_Patch Slack webhook validation message') }}"
 
   tasks:
     - name: Validate required inputs

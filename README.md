@@ -10,8 +10,6 @@ Production-style Red Hat Ansible Automation Platform (AAP) patching workflow for
 - Slack notifications for change, incident, and approval events
 - report generation
 
-This repository is based on the working demo pattern from `christiancruz11/aap_patching` and adapted for `tam_arpit` workflows and `TAM_DAY` labeling in AAP.
-
 ## What This Demo Delivers
 
 - **Governed patching:** starts with change request gate (`Create CR - Wait`)
@@ -21,13 +19,13 @@ This repository is based on the working demo pattern from `christiancruz11/aap_p
 - **Notifications:** ServiceNow approval, incident, and closure events can be mirrored into any Slack workspace through a webhook
 - **Visibility:** generated patching report
 
-## What Was Optimized
+## Follow This Approach
 
 - Controller-side `extra_vars` are generated from code instead of maintained manually in AAP.
 - ServiceNow integration is encapsulated as reusable AAP templates for credential setup and connectivity validation.
 - Slack notification delivery is now generic and webhook-based, so any Slack workspace can consume the workflow events without editing role code.
 - Local laptop bootstrap is reduced to dependency install, syntax validation, and AAP asset bootstrap through versioned scripts.
-- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `TAM_DAY`-labeled templates rather than tribal knowledge.
+- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `AAP_Patch`-labeled templates rather than tribal knowledge.
 
 ## Workflow Stages
 
@@ -103,7 +101,7 @@ ansible --version
 ```bash
 git clone https://github.com/arpit1303/AAP_patching.git
 cd AAP_patching
-git checkout tam_arpit
+git checkout aap_patch
 ```
 
 Install required external collections:
@@ -129,14 +127,14 @@ make validate
 
 ## Run From a Fork
 
-If someone forks this repository, they can use it without the original demo estate. The minimum path is:
+Use this minimum path after forking the repository:
 
 1. Fork the repo in GitHub.
 2. Clone the fork locally.
 3. Run `./scripts/setup_local_demo.sh`.
 4. Point AAP project SCM to the fork and branch.
-5. Run the local bootstrap command below or launch `Bootstrap TAM_DAY AAP Assets` from AAP.
-6. Use the generated `TAM_DAY` environment templates to build AWS, ServiceNow, Slack, and host prep.
+5. Run the local bootstrap command below or launch `Bootstrap AAP_Patch AAP Assets` from AAP.
+6. Use the generated `AAP_Patch` environment templates to build AWS, ServiceNow, Slack, and host prep.
 7. Launch `End to End Patching`.
 
 The only required external accounts are:
@@ -172,32 +170,32 @@ ansible-playbook bootstrap_tam_day_assets.yml \
 
 ### Create the bootstrap Job Template in AAP
 
-1. Sync project `TAM_AAP_Patching` (branch `tam_arpit`).
+1. Sync project `TAM_AAP_Patching` (branch `aap_patch`).
 2. Create Job Template:
-   - Name: `Bootstrap TAM_DAY AAP Assets`
+   - Name: `Bootstrap AAP_Patch AAP Assets`
    - Project: `TAM_AAP_Patching`
    - Playbook: `bootstrap_tam_day_assets.yml`
    - Inventory: `Demo Inventory`
    - Execution Environment: `Default execution environment`
    - Options: enable **Prompt on launch** for Variables
-3. Add label `TAM_DAY` to the template.
+3. Add label `AAP_Patch` to the template.
 4. Launch with variables:
 
 ```yaml
 aap_url: "https://<your-aap-controller>"
 aap_user: "admin"
 aap_pass: "<your-password>"
-template_label: "TAM_DAY"
+template_label: "AAP_Patch"
 workflow_name: "End to End Patching"
 patch_target_hosts: "os_linux"
 report_server_host: "rhel9app"
 change_environment_name: "Dev"
 ```
 
-### What the bootstrap template creates
+### Create these objects with the bootstrap template
 
-- Project: `TAM_DAY AAP Patching`
-  Source: `https://github.com/arpit1303/AAP_patching` branch `tam_arpit`
+- Project: `AAP_Patch AAP Patching`
+  Source: `https://github.com/arpit1303/AAP_patching` branch `aap_patch`
 - Job Templates: source-consistent names (`Create Snapshot`, `Apply Patching`, etc.)
 - Environment Templates:
   - `Environment | AWS | Create Keypair`
@@ -211,13 +209,13 @@ change_environment_name: "Dev"
   - `Environment | Slack | Configure AAP Credential`
   - `Environment | Slack | Validate Webhook`
 - Workflow Template: `End to End Patching`
-- Label on all above: `TAM_DAY`
+- Label on all above: `AAP_Patch`
 - Template-level `extra_vars` that were previously maintained manually in AAP
 - Workflow graph edges aligned to end-to-end patching + rollback model
 
-### Encapsulated template extra vars
+### Use the default template variables
 
-The bootstrap automation now writes the controller-side `extra_vars` directly into the `TAM_DAY` templates so they can be recreated from code.
+Use the bootstrap automation to write these controller-side `extra_vars` directly into the `AAP_Patch` templates.
 
 - `Create Snapshot`
   Sets `_hosts: os_linux` and initializes `patch_progress` / `patch_stage` for `rhel8app`, `rhel8db`, `rhel9app`, and `rhel9db`.
@@ -241,9 +239,9 @@ _hosts: os_linux
 force_failure_apply_patch: true
 ```
 
-### Override the encapsulated defaults
+### Override the default values
 
-You can override these values when launching `Bootstrap TAM_DAY AAP Assets`:
+You can override these values when launching `Bootstrap AAP_Patch AAP Assets`:
 
 ```yaml
 patch_target_hosts: "os_linux"
@@ -294,7 +292,7 @@ If your controller uses different names, pass overrides as extra vars at launch:
 ## Run the Demo
 
 1. In AAP UI, open **Templates**.
-2. Filter by label `TAM_DAY`.
+2. Filter by label `AAP_Patch`.
 3. Launch workflow: `End to End Patching`.
 4. Default extra vars:
 
@@ -312,7 +310,7 @@ force_failure_apply_patch: true
 
 ## Environment Preparation
 
-If you do not already have the APD AWS demo environment, bootstrap template `Bootstrap TAM_DAY AAP Assets` now creates reusable `TAM_DAY`-labeled setup templates for the required AWS and host preparation work.
+If you do not already have the APD AWS demo environment, use bootstrap template `Bootstrap AAP_Patch AAP Assets` to create the `AAP_Patch`-labeled setup templates for the required AWS and host preparation work.
 
 Recommended order:
 
@@ -415,20 +413,20 @@ app_deployment: "database"
 
 ## ServiceNow Setup
 
-This repo now includes the AAP-side ServiceNow setup as reusable `TAM_DAY` templates. What can be automated here is the AAP credential and connectivity validation. Creating a brand new ServiceNow SaaS instance itself is still an external step.
+Use the `AAP_Patch` ServiceNow templates to automate AAP credential setup and connectivity validation. Create the ServiceNow SaaS instance separately if you do not already have one.
 
-### Current demo instance metadata
+### Gather these ServiceNow values
 
-The current demo controller is using:
+If you are following the same demo pattern, use:
 
 - ServiceNow host: `https://dev366437.service-now.com/`
 - ServiceNow username: `admin`
 - Credential name in AAP: `ServiceNow`
 - Credential type in AAP: `ServiceNow` (custom cloud credential type with `SN_HOST`, `SN_USERNAME`, `SN_PASSWORD` environment injection)
 
-The ServiceNow password cannot be read back from AAP once stored. You need to obtain it from the instance owner or use your own ServiceNow instance.
+Do not expect AAP to reveal the stored ServiceNow password. Obtain it from the instance owner or use your own ServiceNow instance.
 
-### If you need your own instance
+### If you need your own ServiceNow instance
 
 Use one of these paths:
 
@@ -437,7 +435,7 @@ Use one of these paths:
 
 Once you have the URL, username, and password, use the templates below.
 
-### ServiceNow templates created by bootstrap
+### Run these ServiceNow templates
 
 - `Environment | ServiceNow | Configure AAP Credential`
   Creates or updates the custom ServiceNow credential type if needed and then creates/updates the `ServiceNow` credential in AAP.
@@ -480,7 +478,7 @@ Slack delivery is now generic. It uses an incoming webhook credential, so the sa
 4. Copy the webhook URL.
 5. Decide whether to keep the default destination channel at the webhook level or override it in AAP with `slack_channel`.
 
-### Slack templates created by bootstrap
+### Run these Slack templates
 
 - `Environment | Slack | Configure AAP Credential`
   Creates or updates the custom `Slack Webhook` credential type and the `Slack Webhook` credential in AAP.
@@ -502,7 +500,7 @@ slack_username: "AAP"
   Defaults:
 
 ```yaml
-slack_message: "TAM_DAY Slack webhook validation message"
+slack_message: "AAP_Patch Slack webhook validation message"
 ```
 
 ### What goes to Slack
@@ -589,11 +587,11 @@ Use these to record a 6-8 minute demo and insert into Google Slides.
 
 ## Troubleshooting
 
-- **Project sync fails (`pathspec tam_arpit`)**  
-  Ensure branch exists in GitHub and AAP project `scm_branch` is `tam_arpit`.
+- **Project sync fails (`pathspec aap_patch`)**  
+  Ensure branch exists in GitHub and AAP project `scm_branch` is `aap_patch`.
 
 - **Templates not visible in UI**  
-  Clear filters and search by label `TAM_DAY`.
+  Clear filters and search by label `AAP_Patch`.
 
 - **Bootstrap template fails with missing AAP credentials**  
   Provide `aap_url`, `aap_user`, and `aap_pass` as launch variables.
@@ -602,7 +600,7 @@ Use these to record a 6-8 minute demo and insert into Google Slides.
   Script exits with object name; create it in AAP or override env variable names.
 
 - **Workflow node missing job template**  
-  Re-run template `Bootstrap TAM_DAY AAP Assets` (idempotent update path).
+  Re-run template `Bootstrap AAP_Patch AAP Assets` (idempotent update path).
 
 - **Slack messages do not appear**  
   Re-run `Environment | Slack | Validate Webhook` and confirm the webhook URL, workspace app permissions, and optional `slack_channel` override.
@@ -619,10 +617,10 @@ Use these to record a 6-8 minute demo and insert into Google Slides.
 ## Maintainer Flow
 
 ```bash
-git checkout tam_arpit
+git checkout aap_patch
 git pull --rebase
 # update files
 git add .
 git commit -m "Update demo content"
-git push origin tam_arpit
+git push origin aap_patch
 ```

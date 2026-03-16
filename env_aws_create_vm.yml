@@ -1,5 +1,5 @@
 ---
-- name: Create AWS VM for TAM_DAY Demo
+- name: Create AWS VM for AAP_Patch Demo
   hosts: localhost
   connection: local
   gather_facts: false
@@ -74,4 +74,4 @@
           env: "{{ create_vm_vm_environment }}"
           blueprint: "{{ vm_blueprint }}"
           ansible_group: cloud
-          info: "Provisioned by TAM_DAY generic AAP template"
+          info: "Provisioned by AAP_Patch generic AAP template"

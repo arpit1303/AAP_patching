@@ -40,5 +40,5 @@ Next steps:
      -e "aap_url=${AAP_URL}" \
      -e "aap_user=${AAP_USER}" \
      -e "aap_pass=${AAP_PASS}"
-3. In AAP, launch the TAM_DAY environment templates to build AWS, ServiceNow, Slack, and host setup.
+3. In AAP, launch the AAP_Patch environment templates to build AWS, ServiceNow, Slack, and host setup.
 EOF

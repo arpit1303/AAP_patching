@@ -1,5 +1,5 @@
 ---
-- name: Create AWS Keypair for TAM_DAY Demo
+- name: Create AWS Keypair for AAP_Patch Demo
   hosts: localhost
   connection: local
   gather_facts: false

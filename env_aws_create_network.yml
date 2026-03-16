@@ -1,5 +1,5 @@
 ---
-- name: Create AWS Network for TAM_DAY Demo
+- name: Create AWS Network for AAP_Patch Demo
   hosts: localhost
   connection: local
   gather_facts: false
@@ -41,7 +41,7 @@
         state: present
         name: "{{ aws_securitygroup_name }}"
         region: "{{ create_vm_aws_region }}"
-        description: Access for TAM_DAY demo nodes
+        description: Access for AAP_Patch demo nodes
         vpc_id: "{{ tam_day_vpc.vpc.id }}"
         rules:
           - proto: tcp

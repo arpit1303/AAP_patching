@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Replicates the source TAM demo assets in a target AAP controller with TAM_DAY naming.
+# Replicates the source TAM demo assets in a target AAP controller with AAP_Patch naming.
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -18,9 +18,9 @@ AAP_USER="${AAP_USER:-admin}"
 AAP_PASS="${AAP_PASS:-}"
 
 ORG_NAME="${ORG_NAME:-Ansible Product Demos (APD)}"
-PROJECT_NAME="${PROJECT_NAME:-TAM_DAY AAP Patching}"
+PROJECT_NAME="${PROJECT_NAME:-AAP_Patch AAP Patching}"
 PROJECT_SCM_URL="${PROJECT_SCM_URL:-https://github.com/arpit1303/AAP_patching.git}"
-PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-tam_arpit}"
+PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-aap_patch}"
 
 INVENTORY_MAIN_NAME="${INVENTORY_MAIN_NAME:-Ansible Product Demos Inventory}"
 INVENTORY_LOCAL_NAME="${INVENTORY_LOCAL_NAME:-Demo Inventory}"
@@ -33,7 +33,7 @@ EE_CLOUD_NAME="${EE_CLOUD_NAME:-Cloud Services Execution Environment}"
 WF_NAME="${WF_NAME:-End to End Patching}"
 WF_EXTRA_VARS="${WF_EXTRA_VARS:-_hosts: os_linux
 force_failure_apply_patch: true}"
-TEMPLATE_LABEL="${TEMPLATE_LABEL:-TAM_DAY}"
+TEMPLATE_LABEL="${TEMPLATE_LABEL:-AAP_Patch}"
 
 PATCH_TARGET_HOSTS="${PATCH_TARGET_HOSTS:-os_linux}"
 REPORT_SERVER_HOST="${REPORT_SERVER_HOST:-rhel9app}"
@@ -362,7 +362,7 @@ slack_credential_name: Slack Webhook
 slack_webhook_url: ''
 slack_channel: patching
 slack_username: AAP" "true" "false"
-ensure_jt "Environment | Slack | Validate Webhook" "env_slack_validate_webhook.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "slack_message: TAM_DAY Slack webhook validation message" "true" "true"
+ensure_jt "Environment | Slack | Validate Webhook" "env_slack_validate_webhook.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "slack_message: AAP_Patch Slack webhook validation message" "true" "true"
 
 attach_credential_by_name "Create CR - Wait" "${SLACK_CREDENTIAL_NAME}"
 attach_credential_by_name "Create CR - Wait (Slack)" "${SLACK_CREDENTIAL_NAME}"
@@ -422,7 +422,7 @@ link_nodes "sync_after" "always_nodes" "generate_report"
 link_nodes "generate_report" "always_nodes" "close_cr"
 
 echo
-echo "TAM_DAY assets are ready in ${AAP_URL}:"
+echo "AAP_Patch assets are ready in ${AAP_URL}:"
 echo "- Project: ${PROJECT_NAME}"
 echo "- Workflow: ${WF_NAME}"
 echo "- Job templates: ${JT_COUNT}"

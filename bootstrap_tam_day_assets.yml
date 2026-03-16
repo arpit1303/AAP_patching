@@ -1,5 +1,5 @@
 ---
-- name: Bootstrap TAM_DAY AAP Assets
+- name: Bootstrap AAP_Patch AAP Assets
   hosts: localhost
   connection: local
   gather_facts: false
@@ -10,9 +10,9 @@
     bootstrap_aap_pass: "{{ aap_pass | default(lookup('env', 'AAP_PASS') | default('', true)) }}"
 
     bootstrap_org_name: "{{ org_name | default('Ansible Product Demos (APD)') }}"
-    bootstrap_project_name: "{{ project_name | default('TAM_DAY AAP Patching') }}"
+    bootstrap_project_name: "{{ project_name | default('AAP_Patch AAP Patching') }}"
     bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/arpit1303/AAP_patching.git') }}"
-    bootstrap_project_scm_branch: "{{ project_scm_branch | default('tam_arpit') }}"
+    bootstrap_project_scm_branch: "{{ project_scm_branch | default('aap_patch') }}"
 
     bootstrap_inventory_main_name: "{{ inventory_main_name | default('Ansible Product Demos Inventory') }}"
     bootstrap_inventory_local_name: "{{ inventory_local_name | default('Demo Inventory') }}"
@@ -22,7 +22,7 @@
     bootstrap_ee_cloud_name: "{{ ee_cloud_name | default('Cloud Services Execution Environment') }}"
 
     bootstrap_workflow_name: "{{ workflow_name | default('End to End Patching') }}"
-    bootstrap_template_label: "{{ template_label | default('TAM_DAY') }}"
+    bootstrap_template_label: "{{ template_label | default('AAP_Patch') }}"
     bootstrap_workflow_extra_vars: |-
       {{ workflow_extra_vars | default('_hosts: os_linux\nforce_failure_apply_patch: true') }}
     bootstrap_patch_target_hosts: "{{ patch_target_hosts | default('os_linux') }}"
@@ -70,7 +70,7 @@
           Provide aap_url, aap_user, and aap_pass as extra vars at launch
           (or as AAP_URL/AAP_USER/AAP_PASS env vars).
 
-    - name: Run TAM_DAY bootstrap script
+    - name: Run AAP_Patch bootstrap script
       ansible.builtin.command: ./scripts/setup_tam_day_aap.sh
       args:
         chdir: "{{ playbook_dir }}"
