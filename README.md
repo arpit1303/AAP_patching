@@ -1,33 +1,27 @@
 # AAP End-to-End Patching Demo
 
-Production-style Red Hat Ansible Automation Platform (AAP) patching workflow for Linux estates, including:
+Reference implementation for an end-to-end Red Hat Ansible Automation Platform (AAP) patching workflow for Linux environments.
 
-- change request orchestration
-- pre/post validation
-- application-aware patch windows
-- AWS snapshot rollback path
-- incident + change closure integration
-- Slack notifications for change, incident, and approval events
-- report generation
+The project combines infrastructure preparation, operating system patching, application-aware orchestration, change governance, rollback handling, reporting, and collaboration notifications into a single reusable automation flow.
 
-## What This Demo Delivers
+## Highlights
 
-- **Governed patching:** starts with change request gate (`Create CR - Wait`)
-- **Resilient execution:** snapshots before patching, rollback on failure
-- **Operational safety:** pre/post OS and app tasks
-- **Traceability:** incident creation on failure path, CR closure on completion
-- **Notifications:** ServiceNow approval, incident, and closure events can be mirrored into any Slack workspace through a webhook
-- **Visibility:** patching report output for audit and handoff
+- ServiceNow-backed change control before patching begins
+- AWS snapshot creation and restore for rollback scenarios
+- Pre-patch and post-patch operating system and application tasks
+- Slack notifications for approvals, incidents, and change closure
+- Repeatable environment setup for AWS, ServiceNow, Slack, and AAP assets
+- Branchable workflow paths for normal execution and failure recovery
 
-## Follow This Approach
+## Architecture
 
-- Keep controller-side `extra_vars` in versioned code instead of maintaining them manually in AAP.
-- ServiceNow integration is encapsulated as reusable AAP templates for credential setup and connectivity validation.
-- Slack notification delivery is now generic and webhook-based, so any Slack workspace can consume the workflow events without editing role code.
-- Local laptop bootstrap is reduced to dependency install, syntax validation, and AAP asset bootstrap through versioned scripts.
-- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `AAP_Patch`-labeled templates rather than versioned automation.
+- **Control plane:** Ansible Automation Platform job templates and workflow templates
+- **Infrastructure layer:** AWS networking, keypair, and EC2 provisioning
+- **Governance layer:** ServiceNow change and incident operations
+- **Notification layer:** Slack webhook delivery
+- **Execution layer:** Linux and application patching playbooks and collection roles
 
-## Workflow Stages
+## Workflow
 
 The `End to End Patching` workflow orchestrates these templates:
 
@@ -73,11 +67,13 @@ Failure branches trigger:
     └── end_to_end_patching_shot_list.csv
 ```
 
-## Prerequisites (Any Local Laptop)
+## Getting Started
+
+### Prerequisites
 
 You can run from macOS, Linux, or Windows with WSL2.
 
-### Required tools
+Required tools:
 
 - `git`
 - `bash`
@@ -86,7 +82,7 @@ You can run from macOS, Linux, or Windows with WSL2.
 - `ansible-core` (recommended)
 - `ansible-galaxy` (recommended)
 
-### Verify tools
+Verify the toolchain:
 
 ```bash
 git --version
@@ -96,7 +92,7 @@ jq --version
 ansible --version
 ```
 
-## Quick Start (Local Clone)
+### Quick Start
 
 ```bash
 git clone https://github.com/<your-org>/<your-repo>.git
@@ -110,24 +106,24 @@ Install required external collections:
 ansible-galaxy collection install -r collections/requirements.yml
 ```
 
-Or use the local wrapper:
+Optional wrapper:
 
 ```bash
 ./scripts/setup_local_demo.sh
 ```
 
-This runs dependency validation, installs the required collections, and syntax-checks the local bootstrap content.
+This validates the local toolchain, installs required collections, and runs syntax checks for the bootstrap content.
 
-If you prefer `make`, optional wrapper targets are also provided:
+If you prefer `make`, the repo also includes:
 
 ```bash
 make deps
 make validate
 ```
 
-## Run From a Fork
+### Fork-Friendly Setup
 
-Use this minimum path after forking the repository:
+To run the project from your own fork:
 
 1. Fork the repo in GitHub.
 2. Clone the fork locally.
@@ -137,14 +133,14 @@ Use this minimum path after forking the repository:
 6. Use the generated `AAP_Patch` environment templates to build AWS, ServiceNow, Slack, and host prep.
 7. Launch `End to End Patching`.
 
-The only required external accounts are:
+External services required:
 
 - an AAP controller
 - an AWS account with permissions to create keypairs, VPC resources, and EC2 instances
 - a ServiceNow instance
 - a Slack incoming webhook in the workspace/channel you want to notify
 
-Local bootstrap command:
+Bootstrap from a local terminal:
 
 ```bash
 export AAP_URL="https://<your-aap-controller>"
@@ -156,9 +152,9 @@ ansible-playbook bootstrap_tam_day_assets.yml \
   -e "aap_pass=${AAP_PASS}"
 ```
 
-## Bootstrap AAP Templates + Workflow (AAP Job Template)
+## Bootstrap in AAP
 
-Automate bootstrap through an AAP Job Template using playbook `bootstrap_tam_day_assets.yml`.
+Use playbook `bootstrap_tam_day_assets.yml` to create the AAP project, job templates, workflow template, labels, and default launch variables.
 
 ```bash
 # local optional validation run
