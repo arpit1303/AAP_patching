@@ -8,7 +8,7 @@
     create_vm_aws_region: "{{ create_vm_aws_region | default('us-east-1') }}"
     aws_key_name: "{{ aws_key_name | default('aws-test-key') }}"
     aws_public_key: "{{ aws_public_key | default('') }}"
-    aws_keypair_owner: "{{ aws_keypair_owner | default('TAM') }}"
+    aws_keypair_owner: "{{ aws_keypair_owner | default('platform-team') }}"
 
   tasks:
     - name: Require public key
@@ -25,4 +25,4 @@
         state: present
         tags:
           owner: "{{ aws_keypair_owner }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo

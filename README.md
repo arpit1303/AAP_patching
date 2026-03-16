@@ -17,15 +17,15 @@ Production-style Red Hat Ansible Automation Platform (AAP) patching workflow for
 - **Operational safety:** pre/post OS and app tasks
 - **Traceability:** incident creation on failure path, CR closure on completion
 - **Notifications:** ServiceNow approval, incident, and closure events can be mirrored into any Slack workspace through a webhook
-- **Visibility:** generated patching report
+- **Visibility:** patching report output for audit and handoff
 
 ## Follow This Approach
 
-- Controller-side `extra_vars` are generated from code instead of maintained manually in AAP.
+- Keep controller-side `extra_vars` in versioned code instead of maintaining them manually in AAP.
 - ServiceNow integration is encapsulated as reusable AAP templates for credential setup and connectivity validation.
 - Slack notification delivery is now generic and webhook-based, so any Slack workspace can consume the workflow events without editing role code.
 - Local laptop bootstrap is reduced to dependency install, syntax validation, and AAP asset bootstrap through versioned scripts.
-- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `AAP_Patch`-labeled templates rather than tribal knowledge.
+- Environment build steps for AWS, host preparation, ServiceNow, and Slack are exposed as `AAP_Patch`-labeled templates rather than versioned automation.
 
 ## Workflow Stages
 
@@ -99,7 +99,7 @@ ansible --version
 ## Quick Start (Local Clone)
 
 ```bash
-git clone https://github.com/arpit1303/AAP_patching.git
+git clone https://github.com/<your-org>/<your-repo>.git
 cd AAP_patching
 git checkout aap_patch
 ```
@@ -148,7 +148,7 @@ Local bootstrap command:
 
 ```bash
 export AAP_URL="https://<your-aap-controller>"
-export AAP_USER="admin"
+export AAP_USER="<your-aap-username>"
 export AAP_PASS="<your-password>"
 ansible-playbook bootstrap_tam_day_assets.yml \
   -e "aap_url=${AAP_URL}" \
@@ -164,18 +164,18 @@ Automate bootstrap through an AAP Job Template using playbook `bootstrap_tam_day
 # local optional validation run
 ansible-playbook bootstrap_tam_day_assets.yml \
   -e "aap_url=https://<your-aap-controller>" \
-  -e "aap_user=admin" \
+  -e "aap_user=<your-aap-username>" \
   -e "aap_pass=<your-password>"
 ```
 
 ### Create the bootstrap Job Template in AAP
 
-1. Sync project `TAM_AAP_Patching` (branch `aap_patch`).
+1. Sync your AAP project on branch `aap_patch`.
 2. Create Job Template:
    - Name: `Bootstrap AAP_Patch AAP Assets`
-   - Project: `TAM_AAP_Patching`
+   - Project: your Git-backed AAP project
    - Playbook: `bootstrap_tam_day_assets.yml`
-   - Inventory: `Demo Inventory`
+   - Inventory: `<your-local-utility-inventory>`
    - Execution Environment: `Default execution environment`
    - Options: enable **Prompt on launch** for Variables
 3. Add label `AAP_Patch` to the template.
@@ -183,7 +183,7 @@ ansible-playbook bootstrap_tam_day_assets.yml \
 
 ```yaml
 aap_url: "https://<your-aap-controller>"
-aap_user: "admin"
+aap_user: "<your-aap-username>"
 aap_pass: "<your-password>"
 template_label: "AAP_Patch"
 workflow_name: "End to End Patching"
@@ -195,7 +195,7 @@ change_environment_name: "Dev"
 ### Create these objects with the bootstrap template
 
 - Project: `AAP_Patch AAP Patching`
-  Source: `https://github.com/arpit1303/AAP_patching` branch `aap_patch`
+  Source: `https://github.com/<your-org>/<your-repo>.git` branch `aap_patch`
 - Job Templates: source-consistent names (`Create Snapshot`, `Apply Patching`, etc.)
 - Environment Templates:
   - `Environment | AWS | Create Keypair`
@@ -247,7 +247,7 @@ You can override these values when launching `Bootstrap AAP_Patch AAP Assets`:
 patch_target_hosts: "os_linux"
 report_server_host: "rhel9app"
 cr_short_description: "Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db"
-cr_description: "TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in Dev to patch"
+cr_description: "Automation requests rhel8app, rhel8db, rhel9app, rhel9db servers in Dev to patch"
 workflow_extra_vars: |
   _hosts: os_linux
   force_failure_apply_patch: true
@@ -269,10 +269,10 @@ create_snapshot_extra_vars: |
 
 The bootstrap playbook expects these existing objects in controller:
 
-- Organization: `Ansible Product Demos (APD)`
+- Organization: `<your-organization>`
 - Inventories:
-  - `Ansible Product Demos Inventory`
-  - `Demo Inventory`
+  - `<your-primary-inventory>`
+  - `<your-local-utility-inventory>`
 - Inventory Source: `AWS Inventory`
 - Execution Environments:
   - `Default execution environment`
@@ -310,7 +310,7 @@ force_failure_apply_patch: true
 
 ## Environment Preparation
 
-If you do not already have the APD AWS demo environment, use bootstrap template `Bootstrap AAP_Patch AAP Assets` to create the `AAP_Patch`-labeled setup templates for the required AWS and host preparation work.
+If you do not already have the AWS environment for the workflow, use bootstrap template `Bootstrap AAP_Patch AAP Assets` to create the `AAP_Patch`-labeled setup templates for the required infrastructure and host preparation work.
 
 Recommended order:
 
@@ -342,7 +342,7 @@ Use the public key from `~/.ssh/aws-test-key.pub` when launching `Environment | 
 ```yaml
 create_vm_aws_region: us-east-1
 aws_key_name: aws-test-key
-aws_keypair_owner: TAM
+aws_keypair_owner: platform-team
 aws_public_key: ""
 ```
 
@@ -351,7 +351,7 @@ aws_public_key: ""
 
 ```yaml
 create_vm_aws_region: us-east-1
-aws_owner_tag: TAM
+aws_owner_tag: platform-team
 aws_vpc_name: aws-test-vpc
 aws_subnet_name: aws-test-subnet
 aws_securitygroup_name: aws-test-sg
@@ -364,7 +364,7 @@ aws_securitygroup_name: aws-test-sg
 ```yaml
 create_vm_aws_region: us-east-1
 create_vm_vm_name: rhel9app
-create_vm_vm_owner: TAM
+create_vm_vm_owner: platform-team
 create_vm_vm_deployment: default
 create_vm_vm_purpose: demo
 create_vm_vm_environment: Dev
@@ -380,9 +380,9 @@ create_vm_aws_keypair_name: aws-test-key
 
 ```yaml
 controller_url: "https://<your-aap-controller>"
-controller_user: "admin"
+controller_user: "<your-aap-username>"
 controller_pass: "<your-password>"
-inventory_name: "Ansible Product Demos Inventory"
+inventory_name: "<your-primary-inventory>"
 target_hosts: "rhel9app,rhel8app"
 app_deployment: "web"
 ```
@@ -391,9 +391,9 @@ app_deployment: "web"
 
 ```yaml
 controller_url: "https://<your-aap-controller>"
-controller_user: "admin"
+controller_user: "<your-aap-username>"
 controller_pass: "<your-password>"
-inventory_name: "Ansible Product Demos Inventory"
+inventory_name: "<your-primary-inventory>"
 target_hosts: "rhel9db,rhel8db"
 app_deployment: "database"
 ```
@@ -417,10 +417,10 @@ Use the `AAP_Patch` ServiceNow templates to automate AAP credential setup and co
 
 ### Gather these ServiceNow values
 
-If you are following the same demo pattern, use:
+Use values from your own ServiceNow environment:
 
-- ServiceNow host: `https://dev366437.service-now.com/`
-- ServiceNow username: `admin`
+- ServiceNow host: `https://your-instance.service-now.com/`
+- ServiceNow username: `<your-servicenow-username>`
 - Credential name in AAP: `ServiceNow`
 - Credential type in AAP: `ServiceNow` (custom cloud credential type with `SN_HOST`, `SN_USERNAME`, `SN_PASSWORD` environment injection)
 
@@ -443,12 +443,12 @@ Once you have the URL, username, and password, use the templates below.
 
 ```yaml
 controller_url: "https://<your-aap-controller>"
-controller_user: "admin"
+controller_user: "<your-aap-username>"
 controller_pass: "<your-password>"
-organization_name: "Ansible Product Demos (APD)"
+organization_name: "<your-organization>"
 servicenow_credential_name: "ServiceNow"
-servicenow_host: "https://dev366437.service-now.com/"
-servicenow_username: "admin"
+servicenow_host: "https://your-instance.service-now.com/"
+servicenow_username: "<your-servicenow-username>"
 servicenow_password: "<your-servicenow-password>"
 ```
 
@@ -486,9 +486,9 @@ Slack delivery is now generic. It uses an incoming webhook credential, so the sa
 
 ```yaml
 controller_url: "https://<your-aap-controller>"
-controller_user: "admin"
+controller_user: "<your-aap-username>"
 controller_pass: "<your-password>"
-organization_name: "Ansible Product Demos (APD)"
+organization_name: "<your-organization>"
 slack_credential_name: "Slack Webhook"
 slack_webhook_url: "https://hooks.slack.com/services/..."
 slack_channel: "patching"

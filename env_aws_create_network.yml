@@ -6,7 +6,7 @@
 
   vars:
     create_vm_aws_region: "{{ create_vm_aws_region | default('us-east-1') }}"
-    aws_owner_tag: "{{ aws_owner_tag | default('TAM') }}"
+    aws_owner_tag: "{{ aws_owner_tag | default('platform-team') }}"
     aws_vpc_name: "{{ aws_vpc_name | default('aws-test-vpc') }}"
     aws_vpc_cidr_block: "{{ aws_vpc_cidr_block | default('10.0.0.0/16') }}"
     aws_subnet_name: "{{ aws_subnet_name | default('aws-test-subnet') }}"
@@ -22,7 +22,7 @@
         region: "{{ create_vm_aws_region }}"
         tags:
           owner: "{{ aws_owner_tag }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo
       register: tam_day_vpc
 
     - name: Create Internet gateway
@@ -33,7 +33,7 @@
         tags:
           Name: "{{ aws_vpc_name }}-igw"
           owner: "{{ aws_owner_tag }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo
       register: tam_day_igw
 
     - name: Create Security group
@@ -61,7 +61,7 @@
         tags:
           Name: "{{ aws_securitygroup_name }}"
           owner: "{{ aws_owner_tag }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo
 
     - name: Create subnet
       amazon.aws.ec2_vpc_subnet:
@@ -73,7 +73,7 @@
         tags:
           Name: "{{ aws_subnet_name }}"
           owner: "{{ aws_owner_tag }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo
       register: tam_day_subnet
 
     - name: Create route table
@@ -89,4 +89,4 @@
         tags:
           Name: "{{ aws_vpc_name }}-rt"
           owner: "{{ aws_owner_tag }}"
-          purpose: tam_day_demo
+          purpose: aap_patch_demo

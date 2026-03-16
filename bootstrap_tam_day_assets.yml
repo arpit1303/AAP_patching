@@ -9,12 +9,12 @@
     bootstrap_aap_user: "{{ aap_user | default(lookup('env', 'AAP_USER') | default('', true)) }}"
     bootstrap_aap_pass: "{{ aap_pass | default(lookup('env', 'AAP_PASS') | default('', true)) }}"
 
-    bootstrap_org_name: "{{ org_name | default('Ansible Product Demos (APD)') }}"
+    bootstrap_org_name: "{{ org_name | default('Default') }}"
     bootstrap_project_name: "{{ project_name | default('AAP_Patch AAP Patching') }}"
-    bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/arpit1303/AAP_patching.git') }}"
+    bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/<your-org>/<your-repo>.git') }}"
     bootstrap_project_scm_branch: "{{ project_scm_branch | default('aap_patch') }}"
 
-    bootstrap_inventory_main_name: "{{ inventory_main_name | default('Ansible Product Demos Inventory') }}"
+    bootstrap_inventory_main_name: "{{ inventory_main_name | default('Demo Inventory') }}"
     bootstrap_inventory_local_name: "{{ inventory_local_name | default('Demo Inventory') }}"
     bootstrap_aws_source_name: "{{ aws_source_name | default('AWS Inventory') }}"
 
@@ -29,7 +29,7 @@
     bootstrap_report_server_host: "{{ report_server_host | default('rhel9app') }}"
     bootstrap_change_environment_name: "{{ change_environment_name | default('Dev') }}"
     bootstrap_cr_short_description: "{{ cr_short_description | default('Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db') }}"
-    bootstrap_cr_description: "{{ cr_description | default('TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in Dev to patch') }}"
+    bootstrap_cr_description: "{{ cr_description | default('Automation requests rhel8app, rhel8db, rhel9app, rhel9db servers in Dev to patch') }}"
     bootstrap_create_snapshot_extra_vars: |-
       {{ create_snapshot_extra_vars | default('_hosts: os_linux\npatch_progress:\n  rhel8app: success\n  rhel8db: success\n  rhel9app: success\n  rhel9db: success\npatch_stage:\n  rhel8app: snapshot_create\n  rhel8db: snapshot_create\n  rhel9app: snapshot_create\n  rhel9db: snapshot_create') }}
 

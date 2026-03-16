@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Replicates the source TAM demo assets in a target AAP controller with AAP_Patch naming.
+# Creates the AAP_Patch assets in a target AAP controller.
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -13,16 +13,16 @@ require_cmd() {
 require_cmd curl
 require_cmd jq
 
-AAP_URL="${AAP_URL:-https://aap-aap.apps.cluster-slps4-1.dynamic.redhatworkshops.io}"
-AAP_USER="${AAP_USER:-admin}"
+AAP_URL="${AAP_URL:-}"
+AAP_USER="${AAP_USER:-}"
 AAP_PASS="${AAP_PASS:-}"
 
-ORG_NAME="${ORG_NAME:-Ansible Product Demos (APD)}"
+ORG_NAME="${ORG_NAME:-Default}"
 PROJECT_NAME="${PROJECT_NAME:-AAP_Patch AAP Patching}"
-PROJECT_SCM_URL="${PROJECT_SCM_URL:-https://github.com/arpit1303/AAP_patching.git}"
+PROJECT_SCM_URL="${PROJECT_SCM_URL:-https://github.com/<your-org>/<your-repo>.git}"
 PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-aap_patch}"
 
-INVENTORY_MAIN_NAME="${INVENTORY_MAIN_NAME:-Ansible Product Demos Inventory}"
+INVENTORY_MAIN_NAME="${INVENTORY_MAIN_NAME:-Demo Inventory}"
 INVENTORY_LOCAL_NAME="${INVENTORY_LOCAL_NAME:-Demo Inventory}"
 AWS_SOURCE_NAME="${AWS_SOURCE_NAME:-AWS Inventory}"
 SLACK_CREDENTIAL_NAME="${SLACK_CREDENTIAL_NAME:-Slack Webhook}"
@@ -38,7 +38,7 @@ TEMPLATE_LABEL="${TEMPLATE_LABEL:-AAP_Patch}"
 PATCH_TARGET_HOSTS="${PATCH_TARGET_HOSTS:-os_linux}"
 REPORT_SERVER_HOST="${REPORT_SERVER_HOST:-rhel9app}"
 CHANGE_TARGET_HOSTS="${CHANGE_TARGET_HOSTS:-rhel8app, rhel8db, rhel9app, rhel9db}"
-CHANGE_OWNER_NAME="${CHANGE_OWNER_NAME:-TAM}"
+CHANGE_OWNER_NAME="${CHANGE_OWNER_NAME:-Automation}"
 CHANGE_ENVIRONMENT_NAME="${CHANGE_ENVIRONMENT_NAME:-Dev}"
 CR_SHORT_DESCRIPTION="${CR_SHORT_DESCRIPTION:-Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db}"
 CR_DESCRIPTION="${CR_DESCRIPTION:-${CHANGE_OWNER_NAME} requests ${CHANGE_TARGET_HOSTS} servers in ${CHANGE_ENVIRONMENT_NAME} to patch}"
@@ -329,16 +329,16 @@ ensure_jt "Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCA
 
 ensure_jt "Environment | AWS | Create Keypair" "env_aws_create_keypair.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
 aws_key_name: aws-test-key
-aws_keypair_owner: TAM
+aws_keypair_owner: platform-team
 aws_public_key: ''" "true" "true"
 ensure_jt "Environment | AWS | Create Network" "env_aws_create_network.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
-aws_owner_tag: TAM
+aws_owner_tag: platform-team
 aws_vpc_name: aws-test-vpc
 aws_subnet_name: aws-test-subnet
 aws_securitygroup_name: aws-test-sg" "true" "true"
 ensure_jt "Environment | AWS | Create VM" "env_aws_create_vm.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
 create_vm_vm_name: rhel9app
-create_vm_vm_owner: TAM
+create_vm_vm_owner: platform-team
 create_vm_vm_deployment: default
 create_vm_vm_purpose: demo
 create_vm_vm_environment: Dev
@@ -346,18 +346,18 @@ vm_blueprint: rhel9
 create_vm_aws_vpc_subnet_name: aws-test-subnet
 create_vm_aws_securitygroup_name: aws-test-sg
 create_vm_aws_keypair_name: aws-test-key" "true" "true"
-ensure_jt "Environment | Inventory | Set App Deployment" "env_set_host_app_deployment.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "inventory_name: Ansible Product Demos Inventory
+ensure_jt "Environment | Inventory | Set App Deployment" "env_set_host_app_deployment.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "inventory_name: ${INVENTORY_MAIN_NAME}
 target_hosts: rhel9app,rhel8app
 app_deployment: web" "true" "false"
 ensure_jt "Environment | Linux | Prepare Web Hosts" "env_prepare_web_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9app:rhel8app" "true" "true"
 ensure_jt "Environment | Linux | Prepare DB Hosts" "env_prepare_db_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9db:rhel8db" "true" "true"
-ensure_jt "Environment | ServiceNow | Configure AAP Credential" "env_servicenow_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: Ansible Product Demos (APD)
+ensure_jt "Environment | ServiceNow | Configure AAP Credential" "env_servicenow_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: ${ORG_NAME}
 servicenow_credential_name: ServiceNow
-servicenow_host: https://dev366437.service-now.com/
-servicenow_username: admin
+servicenow_host: https://your-instance.service-now.com/
+servicenow_username: ''
 servicenow_password: ''" "true" "false"
 ensure_jt "Environment | ServiceNow | Validate Instance" "env_servicenow_validate_instance.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "servicenow_validate_certs: true" "true" "true"
-ensure_jt "Environment | Slack | Configure AAP Credential" "env_slack_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: Ansible Product Demos (APD)
+ensure_jt "Environment | Slack | Configure AAP Credential" "env_slack_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: ${ORG_NAME}
 slack_credential_name: Slack Webhook
 slack_webhook_url: ''
 slack_channel: patching

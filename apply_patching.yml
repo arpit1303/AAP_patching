@@ -18,9 +18,9 @@
     when: patch_progress[inventory_hostname] == 'success'
     block:
 
-      - name: FORCE FAILURE FOR DEMO
+      - name: Force failure for rollback scenario
         ansible.builtin.fail:
-          msg: "Simulating a patching failure for demo purposes."
+          msg: "Simulating a controlled patching failure."
         when: force_failure_apply_patch | default(false) | bool
                 
       - name: Include patching role
@@ -69,4 +69,3 @@
       - name: Enforce Failure
         ansible.builtin.fail:
           msg: "Force to Fail"
-

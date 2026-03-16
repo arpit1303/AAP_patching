@@ -33,7 +33,7 @@ Local prerequisites are ready.
 Next steps:
 1. Export AAP credentials if you want to run bootstrap locally:
    export AAP_URL="https://<your-aap-controller>"
-   export AAP_USER="admin"
+   export AAP_USER="<your-aap-username>"
    export AAP_PASS="<your-password>"
 2. Bootstrap AAP assets:
    ansible-playbook bootstrap_tam_day_assets.yml \

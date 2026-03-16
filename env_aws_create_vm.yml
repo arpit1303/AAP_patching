@@ -7,7 +7,7 @@
   vars:
     create_vm_aws_region: "{{ create_vm_aws_region | default('us-east-1') }}"
     create_vm_vm_name: "{{ create_vm_vm_name | default('rhel9app') }}"
-    create_vm_vm_owner: "{{ create_vm_vm_owner | default('TAM') }}"
+    create_vm_vm_owner: "{{ create_vm_vm_owner | default('platform-team') }}"
     create_vm_vm_deployment: "{{ create_vm_vm_deployment | default('default') }}"
     create_vm_vm_purpose: "{{ create_vm_vm_purpose | default('demo') }}"
     create_vm_vm_environment: "{{ create_vm_vm_environment | default('Dev') }}"
