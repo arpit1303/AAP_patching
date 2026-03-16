@@ -19,8 +19,8 @@ AAP_PASS="${AAP_PASS:-}"
 
 ORG_NAME="${ORG_NAME:-Ansible Product Demos (APD)}"
 PROJECT_NAME="${PROJECT_NAME:-TAM_DAY AAP Patching}"
-PROJECT_SCM_URL="${PROJECT_SCM_URL:-https://github.com/christiancruz11/aap_patching.git}"
-PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-tam}"
+PROJECT_SCM_URL="${PROJECT_SCM_URL:-https://github.com/arpit1303/AAP_patching.git}"
+PROJECT_SCM_BRANCH="${PROJECT_SCM_BRANCH:-tam_arpit}"
 
 INVENTORY_MAIN_NAME="${INVENTORY_MAIN_NAME:-Ansible Product Demos Inventory}"
 INVENTORY_LOCAL_NAME="${INVENTORY_LOCAL_NAME:-Demo Inventory}"
@@ -199,6 +199,10 @@ ensure_jt() {
 
   if [[ -z "${jt_id}" ]]; then
     jt_id="$(api POST "/api/controller/v2/job_templates/" "${payload}" | jq -r '.id')"
+    if [[ -z "${jt_id}" || "${jt_id}" == "null" ]]; then
+      echo "Failed to create JT: ${name}" >&2
+      exit 1
+    fi
     echo "Created JT: ${name} (id=${jt_id})"
   else
     api PATCH "/api/controller/v2/job_templates/${jt_id}/" "${payload}" >/dev/null

@@ -11,8 +11,8 @@
 
     bootstrap_org_name: "{{ org_name | default('Ansible Product Demos (APD)') }}"
     bootstrap_project_name: "{{ project_name | default('TAM_DAY AAP Patching') }}"
-    bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/christiancruz11/aap_patching.git') }}"
-    bootstrap_project_scm_branch: "{{ project_scm_branch | default('tam') }}"
+    bootstrap_project_scm_url: "{{ project_scm_url | default('https://github.com/arpit1303/AAP_patching.git') }}"
+    bootstrap_project_scm_branch: "{{ project_scm_branch | default('tam_arpit') }}"
 
     bootstrap_inventory_main_name: "{{ inventory_main_name | default('Ansible Product Demos Inventory') }}"
     bootstrap_inventory_local_name: "{{ inventory_local_name | default('Demo Inventory') }}"
