@@ -144,6 +144,8 @@ ensure_jt() {
   local ee_id="$4"
   local limit="$5"
   local extra_vars="$6"
+  local ask_vars="${7:-false}"
+  local ask_credential="${8:-false}"
 
   local jt_id
   jt_id="$(lookup_id_by_name "/api/controller/v2/job_templates/" "${name}")"
@@ -155,6 +157,8 @@ ensure_jt() {
       --arg playbook "$playbook" \
       --arg limit "$limit" \
       --arg extra_vars "$extra_vars" \
+      --argjson ask_vars "$ask_vars" \
+      --argjson ask_credential "$ask_credential" \
       --argjson inventory "$inventory_id" \
       --argjson project "$PROJECT_ID" \
       '{
@@ -164,7 +168,9 @@ ensure_jt() {
         project: $project,
         playbook: $playbook,
         limit: $limit,
-        extra_vars: $extra_vars
+        extra_vars: $extra_vars,
+        ask_variables_on_launch: $ask_vars,
+        ask_credential_on_launch: $ask_credential
       }')"
   else
     payload="$(jq -n \
@@ -172,6 +178,8 @@ ensure_jt() {
       --arg playbook "$playbook" \
       --arg limit "$limit" \
       --arg extra_vars "$extra_vars" \
+      --argjson ask_vars "$ask_vars" \
+      --argjson ask_credential "$ask_credential" \
       --argjson inventory "$inventory_id" \
       --argjson project "$PROJECT_ID" \
       --argjson ee "$ee_id" \
@@ -183,7 +191,9 @@ ensure_jt() {
         playbook: $playbook,
         execution_environment: $ee,
         limit: $limit,
-        extra_vars: $extra_vars
+        extra_vars: $extra_vars,
+        ask_variables_on_launch: $ask_vars,
+        ask_credential_on_launch: $ask_credential
       }')"
   fi
 
@@ -297,6 +307,31 @@ ensure_jt "Create Incident Ticket" "snow_create_ticket.yml" "${INV_MAIN_ID}" "nu
 ensure_jt "Close CR" "snow_close_cr.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "" ""
 ensure_jt "Restore Snapshot" "snapshot_restore.yml" "${INV_MAIN_ID}" "${EE_CLOUD_ID}" "" ""
 ensure_jt "Create CR - Wait (Slack)" "snow_create_cr_slack_wait.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" ""
+
+ensure_jt "Environment | AWS | Create Keypair" "env_aws_create_keypair.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
+aws_key_name: aws-test-key
+aws_keypair_owner: TAM
+aws_public_key: ''" "true" "true"
+ensure_jt "Environment | AWS | Create Network" "env_aws_create_network.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
+aws_owner_tag: TAM
+aws_vpc_name: aws-test-vpc
+aws_subnet_name: aws-test-subnet
+aws_securitygroup_name: aws-test-sg" "true" "true"
+ensure_jt "Environment | AWS | Create VM" "env_aws_create_vm.yml" "${INV_LOCAL_ID}" "${EE_CLOUD_ID}" "localhost" "create_vm_aws_region: us-east-1
+create_vm_vm_name: rhel9app
+create_vm_vm_owner: TAM
+create_vm_vm_deployment: default
+create_vm_vm_purpose: demo
+create_vm_vm_environment: Dev
+vm_blueprint: rhel9
+create_vm_aws_vpc_subnet_name: aws-test-subnet
+create_vm_aws_securitygroup_name: aws-test-sg
+create_vm_aws_keypair_name: aws-test-key" "true" "true"
+ensure_jt "Environment | Inventory | Set App Deployment" "env_set_host_app_deployment.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "inventory_name: Ansible Product Demos Inventory
+target_hosts: rhel9app,rhel8app
+app_deployment: web" "true" "false"
+ensure_jt "Environment | Linux | Prepare Web Hosts" "env_prepare_web_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9app:rhel8app" "true" "true"
+ensure_jt "Environment | Linux | Prepare DB Hosts" "env_prepare_db_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9db:rhel8db" "true" "true"
 
 ensure_workflow
 delete_existing_nodes

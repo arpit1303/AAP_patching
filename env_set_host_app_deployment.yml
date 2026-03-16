@@ -1,0 +1,68 @@
+---
+- name: Set app_deployment Variable on AAP Inventory Hosts
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    controller_url: "{{ controller_url | default(aap_url | default(lookup('env', 'AAP_URL') | default('', true))) }}"
+    controller_user: "{{ controller_user | default(aap_user | default(lookup('env', 'AAP_USER') | default('', true))) }}"
+    controller_pass: "{{ controller_pass | default(aap_pass | default(lookup('env', 'AAP_PASS') | default('', true))) }}"
+    inventory_name: "{{ inventory_name | default('Ansible Product Demos Inventory') }}"
+    target_hosts: "{{ target_hosts | default('rhel9app,rhel8app') }}"
+    app_deployment: "{{ app_deployment | default('web') }}"
+
+  tasks:
+    - name: Validate controller access inputs
+      ansible.builtin.assert:
+        that:
+          - controller_url | length > 0
+          - controller_user | length > 0
+          - controller_pass | length > 0
+        fail_msg: "Set controller_url, controller_user, and controller_pass."
+
+    - name: Lookup inventory
+      ansible.builtin.uri:
+        url: "{{ controller_url }}/api/controller/v2/inventories/?name={{ inventory_name | urlencode }}"
+        method: GET
+        user: "{{ controller_user }}"
+        password: "{{ controller_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: inventory_lookup
+
+    - name: Require target inventory
+      ansible.builtin.assert:
+        that:
+          - inventory_lookup.json.count | int > 0
+        fail_msg: "Inventory {{ inventory_name }} not found."
+
+    - name: Set inventory id fact
+      ansible.builtin.set_fact:
+        inventory_id: "{{ inventory_lookup.json.results[0].id }}"
+        target_host_list: "{{ target_hosts.split(',') | map('trim') | list }}"
+
+    - name: Lookup hosts
+      ansible.builtin.uri:
+        url: "{{ controller_url }}/api/controller/v2/hosts/?inventory={{ inventory_id }}&name={{ item | urlencode }}"
+        method: GET
+        user: "{{ controller_user }}"
+        password: "{{ controller_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+      loop: "{{ target_host_list }}"
+      register: host_lookup
+
+    - name: Update host variables
+      ansible.builtin.uri:
+        url: "{{ controller_url }}/api/controller/v2/hosts/{{ item.json.results[0].id }}/"
+        method: PATCH
+        user: "{{ controller_user }}"
+        password: "{{ controller_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        body_format: json
+        body:
+          variables: "app_deployment: {{ app_deployment }}\n"
+      loop: "{{ host_lookup.results }}"
+      when: item.json.count | int > 0

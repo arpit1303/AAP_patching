@@ -1,0 +1,28 @@
+---
+- name: Prepare Database Hosts for TAM_DAY Demo
+  hosts: "{{ _hosts | default('rhel9db:rhel8db') }}"
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install PostgreSQL packages
+      ansible.builtin.dnf:
+        name:
+          - postgresql-server
+          - postgresql-contrib
+        state: present
+
+    - name: Check if PostgreSQL is initialized
+      ansible.builtin.stat:
+        path: /var/lib/pgsql/data/PG_VERSION
+      register: postgres_data
+
+    - name: Initialize PostgreSQL database
+      ansible.builtin.command: postgresql-setup --initdb
+      when: not postgres_data.stat.exists
+
+    - name: Start and enable PostgreSQL
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true

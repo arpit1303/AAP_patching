@@ -1,0 +1,77 @@
+---
+- name: Create AWS VM for TAM_DAY Demo
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    create_vm_aws_region: "{{ create_vm_aws_region | default('us-east-1') }}"
+    create_vm_vm_name: "{{ create_vm_vm_name | default('rhel9app') }}"
+    create_vm_vm_owner: "{{ create_vm_vm_owner | default('TAM') }}"
+    create_vm_vm_deployment: "{{ create_vm_vm_deployment | default('default') }}"
+    create_vm_vm_purpose: "{{ create_vm_vm_purpose | default('demo') }}"
+    create_vm_vm_environment: "{{ create_vm_vm_environment | default('Dev') }}"
+    vm_blueprint: "{{ vm_blueprint | default('rhel9') }}"
+    create_vm_aws_vpc_subnet_name: "{{ create_vm_aws_vpc_subnet_name | default('aws-test-subnet') }}"
+    create_vm_aws_securitygroup_name: "{{ create_vm_aws_securitygroup_name | default('aws-test-sg') }}"
+    create_vm_aws_keypair_name: "{{ create_vm_aws_keypair_name | default('aws-test-key') }}"
+    create_vm_instance_type: "{{ create_vm_instance_type | default('t3.medium') }}"
+    create_vm_aws_image_owners: "{{ create_vm_aws_image_owners | default(['309956199498']) }}"
+    create_vm_aws_image_filter: >-
+      {{ create_vm_aws_image_filter | default((vm_blueprint == 'rhel8')
+         | ternary('RHEL-8.10.0_HVM-*x86_64*', 'RHEL-9.5.0_HVM-*x86_64*')) }}
+
+  tasks:
+    - name: Lookup subnet by name
+      amazon.aws.ec2_vpc_subnet_info:
+        region: "{{ create_vm_aws_region }}"
+        filters:
+          "tag:Name": "{{ create_vm_aws_vpc_subnet_name }}"
+      register: tam_day_subnet
+
+    - name: Require subnet
+      ansible.builtin.assert:
+        that:
+          - tam_day_subnet.subnets | length > 0
+        fail_msg: "Subnet {{ create_vm_aws_vpc_subnet_name }} was not found."
+
+    - name: Lookup AMI
+      amazon.aws.ec2_ami_info:
+        region: "{{ create_vm_aws_region }}"
+        owners: "{{ create_vm_aws_image_owners }}"
+        filters:
+          name: "{{ create_vm_aws_image_filter }}"
+          architecture: x86_64
+      register: tam_day_amis
+
+    - name: Require AMI
+      ansible.builtin.assert:
+        that:
+          - tam_day_amis.images | length > 0
+        fail_msg: "No AMI found for filter {{ create_vm_aws_image_filter }}."
+
+    - name: Select newest AMI
+      ansible.builtin.set_fact:
+        tam_day_ami_id: "{{ (tam_day_amis.images | sort(attribute='creation_date'))[-1].image_id }}"
+
+    - name: Create EC2 instance
+      amazon.aws.ec2_instance:
+        name: "{{ create_vm_vm_name }}"
+        region: "{{ create_vm_aws_region }}"
+        image_id: "{{ tam_day_ami_id }}"
+        instance_type: "{{ create_vm_instance_type }}"
+        key_name: "{{ create_vm_aws_keypair_name }}"
+        vpc_subnet_id: "{{ tam_day_subnet.subnets[0].id }}"
+        security_group: "{{ create_vm_aws_securitygroup_name }}"
+        wait: true
+        network:
+          assign_public_ip: true
+        tags:
+          Name: "{{ create_vm_vm_name }}"
+          owner: "{{ create_vm_vm_owner }}"
+          deployment: "{{ create_vm_vm_deployment }}"
+          purpose: "{{ create_vm_vm_purpose }}"
+          env: "{{ create_vm_vm_environment }}"
+          blueprint: "{{ vm_blueprint }}"
+          ansible_group: cloud
+          info: "Provisioned by TAM_DAY generic AAP template"

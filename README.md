@@ -240,6 +240,104 @@ _hosts: os_linux
 force_failure_apply_patch: true
 ```
 
+## Environment Preparation
+
+If you do not already have the APD AWS demo environment, bootstrap template `Bootstrap TAM_DAY AAP Assets` now creates reusable `TAM_DAY`-labeled setup templates for the required AWS and host preparation work.
+
+Recommended order:
+
+1. `Environment | AWS | Create Keypair`
+2. `Environment | AWS | Create Network`
+3. `Environment | AWS | Create VM`
+4. `Environment | Inventory | Set App Deployment`
+5. `Environment | Linux | Prepare Web Hosts`
+6. `Environment | Inventory | Set App Deployment`
+7. `Environment | Linux | Prepare DB Hosts`
+
+### Generate SSH key locally
+
+```bash
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/aws-test-key -C "aws-test-key"
+```
+
+Use the public key from `~/.ssh/aws-test-key.pub` when launching `Environment | AWS | Create Keypair`.
+
+### Template defaults
+
+- `Environment | AWS | Create Keypair`
+  Defaults:
+
+```yaml
+create_vm_aws_region: us-east-1
+aws_key_name: aws-test-key
+aws_keypair_owner: TAM
+aws_public_key: ""
+```
+
+- `Environment | AWS | Create Network`
+  Defaults:
+
+```yaml
+create_vm_aws_region: us-east-1
+aws_owner_tag: TAM
+aws_vpc_name: aws-test-vpc
+aws_subnet_name: aws-test-subnet
+aws_securitygroup_name: aws-test-sg
+```
+
+- `Environment | AWS | Create VM`
+  Run once for each VM (`rhel9app`, `rhel9db`, `rhel8app`, `rhel8db`).
+  Defaults:
+
+```yaml
+create_vm_aws_region: us-east-1
+create_vm_vm_name: rhel9app
+create_vm_vm_owner: TAM
+create_vm_vm_deployment: default
+create_vm_vm_purpose: demo
+create_vm_vm_environment: Dev
+vm_blueprint: rhel9
+create_vm_aws_vpc_subnet_name: aws-test-subnet
+create_vm_aws_securitygroup_name: aws-test-sg
+create_vm_aws_keypair_name: aws-test-key
+```
+
+- `Environment | Inventory | Set App Deployment`
+  Use once for app hosts and once for DB hosts.
+  App example:
+
+```yaml
+controller_url: "https://<your-aap-controller>"
+controller_user: "admin"
+controller_pass: "<your-password>"
+inventory_name: "Ansible Product Demos Inventory"
+target_hosts: "rhel9app,rhel8app"
+app_deployment: "web"
+```
+
+  DB example:
+
+```yaml
+controller_url: "https://<your-aap-controller>"
+controller_user: "admin"
+controller_pass: "<your-password>"
+inventory_name: "Ansible Product Demos Inventory"
+target_hosts: "rhel9db,rhel8db"
+app_deployment: "database"
+```
+
+- `Environment | Linux | Prepare Web Hosts`
+  Installs and starts `httpd`, places a valid `/var/www/html/index.html`, and verifies HTTP `200`.
+
+- `Environment | Linux | Prepare DB Hosts`
+  Installs `postgresql-server` and `postgresql-contrib`, initializes the database if needed, and enables `postgresql`.
+
+### Credentials required for setup templates
+
+- AWS templates should be launched with an AWS credential attached.
+- Linux host prep templates should be launched with your machine credential for the EC2 hosts.
+- `Environment | Inventory | Set App Deployment` uses controller credentials passed at launch as variables.
+
 ## Professional Demo Assets
 
 Prepared presentation assets are available in:

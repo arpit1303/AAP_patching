@@ -1,0 +1,47 @@
+---
+- name: Prepare Web Hosts for TAM_DAY Demo
+  hosts: "{{ _hosts | default('rhel9app:rhel8app') }}"
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install httpd
+      ansible.builtin.dnf:
+        name: httpd
+        state: present
+
+    - name: Start and enable httpd
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Check for packaged test page
+      ansible.builtin.stat:
+        path: /usr/share/testpage/index.html
+      register: testpage_index
+
+    - name: Copy packaged test page
+      ansible.builtin.copy:
+        src: /usr/share/testpage/index.html
+        dest: /var/www/html/index.html
+        remote_src: true
+        mode: "0644"
+      when: testpage_index.stat.exists
+
+    - name: Install fallback index page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: "<html><body><h1>TAM_DAY demo web host</h1></body></html>\n"
+        mode: "0644"
+      when: not testpage_index.stat.exists
+
+    - name: Restart httpd
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+
+    - name: Verify web response
+      ansible.builtin.uri:
+        url: http://localhost
+        status_code: 200

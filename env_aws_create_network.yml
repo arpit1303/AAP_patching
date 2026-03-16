@@ -1,0 +1,92 @@
+---
+- name: Create AWS Network for TAM_DAY Demo
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    create_vm_aws_region: "{{ create_vm_aws_region | default('us-east-1') }}"
+    aws_owner_tag: "{{ aws_owner_tag | default('TAM') }}"
+    aws_vpc_name: "{{ aws_vpc_name | default('aws-test-vpc') }}"
+    aws_vpc_cidr_block: "{{ aws_vpc_cidr_block | default('10.0.0.0/16') }}"
+    aws_subnet_name: "{{ aws_subnet_name | default('aws-test-subnet') }}"
+    aws_subnet_cidr: "{{ aws_subnet_cidr | default('10.0.1.0/24') }}"
+    aws_securitygroup_name: "{{ aws_securitygroup_name | default('aws-test-sg') }}"
+
+  tasks:
+    - name: Create VPC
+      amazon.aws.ec2_vpc_net:
+        state: present
+        name: "{{ aws_vpc_name }}"
+        cidr_block: "{{ aws_vpc_cidr_block }}"
+        region: "{{ create_vm_aws_region }}"
+        tags:
+          owner: "{{ aws_owner_tag }}"
+          purpose: tam_day_demo
+      register: tam_day_vpc
+
+    - name: Create Internet gateway
+      amazon.aws.ec2_vpc_igw:
+        state: present
+        vpc_id: "{{ tam_day_vpc.vpc.id }}"
+        region: "{{ create_vm_aws_region }}"
+        tags:
+          Name: "{{ aws_vpc_name }}-igw"
+          owner: "{{ aws_owner_tag }}"
+          purpose: tam_day_demo
+      register: tam_day_igw
+
+    - name: Create Security group
+      amazon.aws.ec2_security_group:
+        state: present
+        name: "{{ aws_securitygroup_name }}"
+        region: "{{ create_vm_aws_region }}"
+        description: Access for TAM_DAY demo nodes
+        vpc_id: "{{ tam_day_vpc.vpc.id }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+              - 80
+              - 443
+              - 5432
+            cidr_ip: 0.0.0.0/0
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: -1
+            cidr_ip: 0.0.0.0/0
+        tags:
+          Name: "{{ aws_securitygroup_name }}"
+          owner: "{{ aws_owner_tag }}"
+          purpose: tam_day_demo
+
+    - name: Create subnet
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ tam_day_vpc.vpc.id }}"
+        cidr: "{{ aws_subnet_cidr }}"
+        region: "{{ create_vm_aws_region }}"
+        map_public: true
+        tags:
+          Name: "{{ aws_subnet_name }}"
+          owner: "{{ aws_owner_tag }}"
+          purpose: tam_day_demo
+      register: tam_day_subnet
+
+    - name: Create route table
+      amazon.aws.ec2_vpc_route_table:
+        state: present
+        vpc_id: "{{ tam_day_vpc.vpc.id }}"
+        region: "{{ create_vm_aws_region }}"
+        subnets:
+          - "{{ tam_day_subnet.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ tam_day_igw.gateway_id }}"
+        tags:
+          Name: "{{ aws_vpc_name }}-rt"
+          owner: "{{ aws_owner_tag }}"
+          purpose: tam_day_demo
