@@ -1,0 +1,39 @@
+---
+- name: Validate ServiceNow Instance Connectivity
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    servicenow_host: "{{ servicenow_host | default(lookup('env', 'SN_HOST') | default('', true)) }}"
+    servicenow_username: "{{ servicenow_username | default(lookup('env', 'SN_USERNAME') | default('', true)) }}"
+    servicenow_password: "{{ servicenow_password | default(lookup('env', 'SN_PASSWORD') | default('', true)) }}"
+    servicenow_validate_certs: "{{ servicenow_validate_certs | default(true) }}"
+
+  tasks:
+    - name: Validate required inputs
+      ansible.builtin.assert:
+        that:
+          - servicenow_host | length > 0
+          - servicenow_username | length > 0
+          - servicenow_password | length > 0
+        fail_msg: >-
+          Provide a ServiceNow credential at launch or set servicenow_host,
+          servicenow_username, and servicenow_password.
+
+    - name: Validate ServiceNow API connectivity
+      ansible.builtin.uri:
+        url: "{{ servicenow_host.rstrip('/') }}/api/now/table/sys_user?sysparm_limit=1"
+        method: GET
+        user: "{{ servicenow_username }}"
+        password: "{{ servicenow_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ servicenow_validate_certs | bool }}"
+        status_code: 200
+      register: servicenow_validation
+
+    - name: Display validation result
+      ansible.builtin.debug:
+        msg:
+          - "Connected to {{ servicenow_host }}"
+          - "Returned records: {{ servicenow_validation.json.result | length }}"

@@ -254,6 +254,8 @@ Recommended order:
 5. `Environment | Linux | Prepare Web Hosts`
 6. `Environment | Inventory | Set App Deployment`
 7. `Environment | Linux | Prepare DB Hosts`
+8. `Environment | ServiceNow | Configure AAP Credential`
+9. `Environment | ServiceNow | Validate Instance`
 
 ### Generate SSH key locally
 
@@ -338,6 +340,61 @@ app_deployment: "database"
 - AWS templates should be launched with an AWS credential attached.
 - Linux host prep templates should be launched with your machine credential for the EC2 hosts.
 - `Environment | Inventory | Set App Deployment` uses controller credentials passed at launch as variables.
+
+## ServiceNow Setup
+
+This repo now includes the AAP-side ServiceNow setup as reusable `TAM_DAY` templates. What can be automated here is the AAP credential and connectivity validation. Creating a brand new ServiceNow SaaS instance itself is still an external step.
+
+### Current demo instance metadata
+
+The current demo controller is using:
+
+- ServiceNow host: `https://dev366437.service-now.com/`
+- ServiceNow username: `admin`
+- Credential name in AAP: `ServiceNow`
+- Credential type in AAP: `ServiceNow` (custom cloud credential type with `SN_HOST`, `SN_USERNAME`, `SN_PASSWORD` environment injection)
+
+The ServiceNow password cannot be read back from AAP once stored. You need to obtain it from the instance owner or use your own ServiceNow instance.
+
+### If you need your own instance
+
+Use one of these paths:
+
+- Request an instance from your organization
+- Create a ServiceNow Personal Developer Instance (PDI)
+
+Once you have the URL, username, and password, use the templates below.
+
+### ServiceNow templates created by bootstrap
+
+- `Environment | ServiceNow | Configure AAP Credential`
+  Creates or updates the custom ServiceNow credential type if needed and then creates/updates the `ServiceNow` credential in AAP.
+  Defaults:
+
+```yaml
+controller_url: "https://<your-aap-controller>"
+controller_user: "admin"
+controller_pass: "<your-password>"
+organization_name: "Ansible Product Demos (APD)"
+servicenow_credential_name: "ServiceNow"
+servicenow_host: "https://dev366437.service-now.com/"
+servicenow_username: "admin"
+servicenow_password: "<your-servicenow-password>"
+```
+
+- `Environment | ServiceNow | Validate Instance`
+  Launch this with the ServiceNow credential attached. It validates API connectivity against `/api/now/table/sys_user`.
+  Defaults:
+
+```yaml
+servicenow_validate_certs: true
+```
+
+### ServiceNow expectations in the patching workflow
+
+- Change request templates use `assignment_group: CAB Approval`
+- Incident and change operations are executed through the `servicenow.itsm` collection
+- If your instance uses different approval groups or workflow states, adjust the files under `collections/ansible_collections/demo/process/roles/`
 
 ## Professional Demo Assets
 

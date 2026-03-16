@@ -336,6 +336,12 @@ target_hosts: rhel9app,rhel8app
 app_deployment: web" "true" "false"
 ensure_jt "Environment | Linux | Prepare Web Hosts" "env_prepare_web_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9app:rhel8app" "true" "true"
 ensure_jt "Environment | Linux | Prepare DB Hosts" "env_prepare_db_hosts.yml" "${INV_MAIN_ID}" "${EE_DEFAULT_ID}" "" "_hosts: rhel9db:rhel8db" "true" "true"
+ensure_jt "Environment | ServiceNow | Configure AAP Credential" "env_servicenow_configure_aap_credential.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "organization_name: Ansible Product Demos (APD)
+servicenow_credential_name: ServiceNow
+servicenow_host: https://dev366437.service-now.com/
+servicenow_username: admin
+servicenow_password: ''" "true" "false"
+ensure_jt "Environment | ServiceNow | Validate Instance" "env_servicenow_validate_instance.yml" "${INV_LOCAL_ID}" "${EE_DEFAULT_ID}" "localhost" "servicenow_validate_certs: true" "true" "true"
 
 ensure_workflow
 delete_existing_nodes
