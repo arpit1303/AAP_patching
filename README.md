@@ -133,6 +133,7 @@ template_label: "TAM_DAY"
 workflow_name: "End to End Patching"
 patch_target_hosts: "os_linux"
 report_server_host: "rhel9app"
+change_environment_name: "Dev"
 ```
 
 ### What the bootstrap template creates
@@ -178,7 +179,7 @@ You can override these values when launching `Bootstrap TAM_DAY AAP Assets`:
 patch_target_hosts: "os_linux"
 report_server_host: "rhel9app"
 cr_short_description: "Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db"
-cr_description: "TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in {{ change_environment | default('Dev') }} to patch"
+cr_description: "TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in Dev to patch"
 workflow_extra_vars: |
   _hosts: os_linux
   force_failure_apply_patch: true

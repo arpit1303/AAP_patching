@@ -38,8 +38,9 @@ PATCH_TARGET_HOSTS="${PATCH_TARGET_HOSTS:-os_linux}"
 REPORT_SERVER_HOST="${REPORT_SERVER_HOST:-rhel9app}"
 CHANGE_TARGET_HOSTS="${CHANGE_TARGET_HOSTS:-rhel8app, rhel8db, rhel9app, rhel9db}"
 CHANGE_OWNER_NAME="${CHANGE_OWNER_NAME:-TAM}"
+CHANGE_ENVIRONMENT_NAME="${CHANGE_ENVIRONMENT_NAME:-Dev}"
 CR_SHORT_DESCRIPTION="${CR_SHORT_DESCRIPTION:-Patch Change Request rhel8app, rhel8db, rhel9app, rhel9db}"
-CR_DESCRIPTION="${CR_DESCRIPTION:-TAM requests rhel8app, rhel8db, rhel9app, rhel9db servers in {{ change_environment | default('Dev') }} to patch}"
+CR_DESCRIPTION="${CR_DESCRIPTION:-${CHANGE_OWNER_NAME} requests ${CHANGE_TARGET_HOSTS} servers in ${CHANGE_ENVIRONMENT_NAME} to patch}"
 CREATE_SNAPSHOT_EXTRA_VARS="${CREATE_SNAPSHOT_EXTRA_VARS:-_hosts: os_linux
 patch_progress:
   rhel8app: success
